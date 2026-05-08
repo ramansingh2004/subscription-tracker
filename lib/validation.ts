@@ -14,6 +14,14 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const signupSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
 // Subscription Schemas
 export const subscriptionSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -39,4 +47,5 @@ export const subscriptionSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type SignupInput = z.infer<typeof signupSchema>;
 export type SubscriptionInput = z.infer<typeof subscriptionSchema>;
