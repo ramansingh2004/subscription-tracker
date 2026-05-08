@@ -1,15 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState, useEffect } from 'react';
-import apiClient from './api-client';
-import { IUser } from '@/typesDefined/index';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import apiClient from '@/lib/api-client';
+import { useAuthStore } from '@/store/authStore';
+import { ISubscription } from '@/typesDefined';
 
-// Auth Hook
+// useAuth Hook
 export function useAuth() {
-  const [user, setUser] = useState<IUser | null>(null);
+  const router = useRouter();
+  const { user, setUser, clearAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const checkAuth = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) {
@@ -18,67 +20,94 @@ export function useAuth() {
         }
 
         const res = await apiClient.get('/auth/me');
-        setUser(res.data.data);
+        setUser(res.data.data.user);
       } catch (error) {
         localStorage.removeItem('accessToken');
+        clearAuth();
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUser();
-  }, []);
+    checkAuth();
+  }, [setUser, clearAuth]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('accessToken');
-    setUser(null);
-  }, []);
+    localStorage.removeItem('user');
+    clearAuth();
+    router.push('/login');
+  }, [clearAuth, router]);
 
   return { user, isLoading, logout };
 }
 
-// Subscriptions Hook
+// useSubscriptions Hook
 export function useSubscriptions() {
-  const queryClient = useQueryClient();
+  const [subscriptions, setSubscriptions] = useState<ISubscription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: subscriptions = [], isLoading, error } = useQuery({
-    queryKey: ['subscriptions'],
-    queryFn: async () => {
+  const fetchSubscriptions = useCallback(async () => {
+    try {
+      setIsLoading(true);
       const res = await apiClient.get('/subscriptions');
-      return res.data.data;
-    },
-  });
+      setSubscriptions(res.data.data.subscriptions);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const createMutation = useMutation({
-    mutationFn: (data) => apiClient.post('/subscriptions', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-    },
-  });
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: unknown }) => apiClient.put(`/subscriptions/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-    },
-  });
+  return { subscriptions, isLoading, error, refetch: fetchSubscriptions };
+}
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => apiClient.delete(`/subscriptions/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-    },
-  });
+// useNotifications Hook
+export function useNotifications() {
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  return {
-    subscriptions,
-    isLoading,
-    error,
-    create: createMutation.mutate,
-    update: updateMutation.mutate,
-    delete: deleteMutation.mutate,
-    isCreating: createMutation.isPending,
-    isUpdating: updateMutation.isPending,
-    isDeleting: deleteMutation.isPending,
-  };
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const [notifRes, unreadRes] = await Promise.all([
+          apiClient.get('/notifications'),
+          apiClient.get('/notifications/unread'),
+        ]);
+        setNotifications(notifRes.data.data.notifications);
+        setUnreadCount(unreadRes.data.data.unreadCount);
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const markAsRead = useCallback(async (id: string) => {
+    try {
+      await apiClient.put(`/notifications/${id}`, { read: true });
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }, []);
+
+  return { notifications, unreadCount, isLoading, markAsRead };
 }

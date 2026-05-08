@@ -28,7 +28,14 @@ export interface ISubscription extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   name: string;
-  category: string;
+  category:
+    | 'Streaming'
+    | 'Software'
+    | 'Productivity'
+    | 'Entertainment'
+    | 'Education'
+    | 'Health'
+    | 'Other';
   cost: number;
   currency: string;
   billingCycle: 'monthly' | 'yearly' | 'quarterly';
@@ -48,7 +55,7 @@ export interface ISubscription extends Document {
 export interface INotification extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  type: 'renewal' | 'recommendation' | 'report' | 'share';
+  type: 'reminder' | 'upgrade' | 'alert';
   title: string;
   message: string;
   subscriptionId?: mongoose.Types.ObjectId;
