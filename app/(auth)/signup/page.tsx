@@ -18,26 +18,33 @@ export default function SignupPage() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
   });
-
-  const password = watch('password');
 
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
     try {
       const res = await apiClient.post('/auth/register', data);
-      const { accessToken, user } = res.data.data;
+      const { accessToken, refreshToken, user } = res.data.data;
 
+      // Store tokens
       localStorage.setItem('accessToken', accessToken);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Update store
       setUser(user);
 
       toast.success('Account created successfully!');
-      router.push('/');
+      
+      // Hard redirect (more reliable)
+      window.location.href = '/';
+      
     } catch (error: any) {
+      console.error('Signup error:', error);
       toast.error(
         error.response?.data?.error?.message || 'Registration failed'
       );
@@ -149,7 +156,6 @@ export default function SignupPage() {
         Sign in
       </Link>
 
-      {/* Terms */}
       <p className="text-xs text-gray-600 text-center">
         By signing up, you agree to our{' '}
         <Link href="#" className="text-blue-600 hover:underline">

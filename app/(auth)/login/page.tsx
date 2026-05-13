@@ -23,25 +23,26 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginInput) => {
-    setIsLoading(true);
-    try {
-      const res = await apiClient.post('/auth/login', data);
-      const { accessToken, user } = res.data.data;
+  setIsLoading(true);
+  try {
+    const res = await apiClient.post('/auth/login', data);
+    const { accessToken, refreshToken, user } = res.data.data;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-
-      toast.success('Login successful!');
-      router.push('/');
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error?.message || 'Login failed'
-      );
-    } finally {
-      setIsLoading(false);
+    localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
     }
-  };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+
+    toast.success('Login successful!');
+    window.location.href = '/';  // Use window.location instead of router.push
+  } catch (error: any) {
+    toast.error(error.response?.data?.error?.message || 'Login failed');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="max-w-md w-full space-y-8">

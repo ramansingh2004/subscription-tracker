@@ -2,28 +2,26 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
-  const token = request.cookies.get('accessToken')?.value;
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('accessToken')?.value;
 
-  // Public auth pages
-  const authRoutes = ['/login', '/signup'];
+  // Public routes
+  const publicRoutes = ['/login', '/signup'];
+  const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Routes that REQUIRE authentication
-  const protectedRoutes = ['/dashboard', '/subscriptions'];
-
-  const isAuthRoute = authRoutes.includes(pathname);
-
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
+  // Protected routes
+  const protectedRoutes = ['/', '/subscriptions', '/analytics', '/notifications', '/settings'];
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
   );
 
-  // Redirect unauthenticated users to login
+  // Rule 1: No token + protected route = redirect to login
   if (isProtectedRoute && !token) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect logged-in users away from auth pages
-  if (isAuthRoute && token) {
+  // Rule 2: Has token + auth page = redirect to home
+  if (isPublicRoute && token) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -32,6 +30,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
   ],
 };
