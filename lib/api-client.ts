@@ -1,11 +1,20 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
+// Properly construct the API base URL
+const getBaseURL = () => {
+  const appUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  // Ensure /api is appended
+  return appUrl.endsWith('/api') ? appUrl : `${appUrl}/api`;
+};
+
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log('API Client Base URL:', apiClient.defaults.baseURL);
 
 // Request interceptor
 apiClient.interceptors.request.use((config) => {
@@ -27,7 +36,7 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshRes = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
+          `${apiClient.defaults.baseURL}/auth/refresh`,
           {},
           {
             withCredentials: true,

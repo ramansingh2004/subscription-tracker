@@ -14,6 +14,8 @@ export default function SignupPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -24,32 +26,76 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
+    setDebugInfo('');
+
     try {
+      const msg1 = `📝 Form data: ${JSON.stringify(data)}`;
+      console.log(msg1);
+      setDebugInfo(msg1);
+
+      // Your apiClient baseURL is: http://localhost:3000/api (or NEXT_PUBLIC_API_URL/api)
+      // So we call /auth/register (not /api/auth/register) to get the full path
+      const msg2 = `🌐 API Base: ${apiClient.defaults.baseURL}`;
+      console.log(msg2);
+      setDebugInfo(prev => prev + '\n' + msg2);
+
+      const msg3 = `📤 POST /auth/register`;
+      console.log(msg3);
+      setDebugInfo(prev => prev + '\n' + msg3);
+
       const res = await apiClient.post('/auth/register', data);
+
+      const msg4 = `✅ Status: ${res.status}`;
+      console.log(msg4);
+      setDebugInfo(prev => prev + '\n' + msg4);
+
+      console.log('Response:', res.data);
       const { accessToken, refreshToken, user } = res.data.data;
 
-      // Store tokens
+      if (!accessToken || !user) {
+        setDebugInfo(prev => prev + '\n' + '❌ Missing accessToken or user in response');
+        throw new Error('Invalid response - missing token or user data');
+      }
+
       localStorage.setItem('accessToken', accessToken);
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
       localStorage.setItem('user', JSON.stringify(user));
-      
-      // Update store
+
       setUser(user);
 
       toast.success('Account created successfully!');
-      
-      // Hard redirect (more reliable)
-      window.location.href = '/';
-      
+
+      setDebugInfo(prev => prev + '\n' + '✅ Redirecting to /dashboard...');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await router.push('/dashboard');
+
     } catch (error: any) {
-      console.error('Signup error:', error);
-      toast.error(
-        error.response?.data?.error?.message || 'Registration failed'
-      );
-    } finally {
+      console.error('❌ Signup Error:', error);
       setIsLoading(false);
+
+      let debugMsg = `\n❌ ERROR`;
+
+      if (error.response) {
+        debugMsg += `\nStatus: ${error.response.status}`;
+        debugMsg += `\nURL attempted: ${error.config?.url}`;
+        debugMsg += `\nBase URL: ${error.config?.baseURL}`;
+        debugMsg += `\nFull URL: ${error.config?.baseURL}${error.config?.url}`;
+        debugMsg += `\nResponse: ${JSON.stringify(error.response.data)}`;
+      } else {
+        debugMsg += `\nMessage: ${error.message}`;
+      }
+
+      setDebugInfo(prev => prev + debugMsg);
+
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Registration failed';
+
+      toast.error(errorMessage);
     }
   };
 
@@ -62,6 +108,15 @@ export default function SignupPage() {
           Start tracking your subscriptions today
         </p>
       </div>
+
+      {debugInfo && (
+        <div className="p-3 bg-cyan-50 border border-cyan-300 rounded-lg">
+          <h3 className="text-xs font-bold text-cyan-900 mb-2">Debug Info:</h3>
+          <p className="text-xs text-cyan-900 font-mono whitespace-pre-wrap break-words">
+            {debugInfo}
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -98,6 +153,22 @@ export default function SignupPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
+            Username
+          </label>
+          <input
+            {...register('username')}
+            type="text"
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="johndoe"
+          />
+          {errors.username && (
+            <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">Min 3 characters</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
             Email
           </label>
           <input
@@ -124,9 +195,7 @@ export default function SignupPage() {
           {errors.password && (
             <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
           )}
-          <p className="mt-2 text-xs text-gray-600">
-            Must be at least 8 characters with uppercase, lowercase, and number
-          </p>
+          <p className="mt-2 text-xs text-gray-600">Min 6 characters</p>
         </div>
 
         <button

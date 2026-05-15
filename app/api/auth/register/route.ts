@@ -56,13 +56,14 @@ export async function POST(request: NextRequest) {
             firstName: user.firstName,
             lastName: user.lastName,
           },
-          accessToken,
+          accessToken, // ✅ Include in response body
+          refreshToken, // ✅ Also include for frontend (will use httpOnly cookie as backup)
         },
       },
       { status: 201 }
     );
 
-    // Set refresh token in httpOnly cookie
+    // Set refresh token in httpOnly cookie (secure backup)
     response.cookies.set({
       name: 'refreshToken',
       value: refreshToken,
