@@ -4,77 +4,68 @@ import { Subscription } from '@/models/Subscription.model';
 import { subscriptionSchema } from '@/lib/validation';
 import { ZodError } from 'zod';
 
+//GET ALL SUBSCRIPTIONS WITH PAGINATION
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const cursor = searchParams.get('cursor');
-    const category = searchParams.get('category');
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
-    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
-
-    // Validate inputs
-    if (page < 1 || limit < 1 || limit > 100) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { message: 'Invalid page or limit parameters' },
-        },
-        { status: 400 }
-      );
-    }
-
-    // Get user from auth (assuming middleware adds it)
+    // Get authenticated user ID from headers (set by middleware)
     const userId = request.headers.get('x-user-id');
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: { message: 'Unauthorized' } },
+        {
+          success: false,
+          error: { message: 'Unauthorized' },
+        },
         { status: 401 }
       );
     }
 
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get('limit') || '10'))
+    );
+    const category = searchParams.get('category');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
+    const search = searchParams.get('search');
+
     // Build filter
     const filter: any = { userId };
-    if (category) filter.category = category;
+
+    if (category && category !== 'All') {
+      filter.category = category;
+    }
+
+    // Add text search if provided
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { website: { $regex: search, $options: 'i' } },
+      ];
+    }
 
     // Build sort
     const sort: any = { [sortBy]: sortOrder };
 
-    let subscriptions;
-    let total;
-    let totalPages;
+    // Calculate pagination
+    const skip = (page - 1) * limit;
 
-    // CURSOR-BASED PAGINATION (Preferred for performance)
-    if (cursor) {
-      subscriptions = await Subscription.find({
-        ...filter,
-        _id: { $gt: cursor },
-      })
-        .sort(sort)
-        .limit(limit)
-        .lean();
+    // Fetch total count for pagination info
+    const total = await Subscription.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit);
 
-      total = await Subscription.countDocuments(filter);
-      totalPages = Math.ceil(total / limit);
-    } else {
-      // OFFSET-BASED PAGINATION (Traditional)
-      const skip = (page - 1) * limit;
+    // Fetch subscriptions with pagination
+    const subscriptions = await Subscription.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use .lean() for faster queries (read-only)
 
-      subscriptions = await Subscription.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean();
-
-      total = await Subscription.countDocuments(filter);
-      totalPages = Math.ceil(total / limit);
-    }
-
-    // Add caching headers
     const response = NextResponse.json(
       {
         success: true,
@@ -84,13 +75,13 @@ export async function GET(request: NextRequest) {
           limit,
           total,
           totalPages,
-          cursor: subscriptions.length > 0 ? subscriptions[subscriptions.length - 1]._id : null,
+          hasMore: page < totalPages,
         },
       },
       { status: 200 }
     );
 
-    // Cache for 5 minutes in browser, 10 minutes in CDN
+    // Set cache headers (5 minutes for browser, 10 minutes for CDN)
     response.headers.set(
       'Cache-Control',
       'private, max-age=300, stale-while-revalidate=600'
@@ -109,20 +100,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// CREATE NEW SUBSCRIPTION
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const body = await request.json();
-    const validatedData = subscriptionSchema.parse(body);
-
     const userId = request.headers.get('x-user-id');
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: { message: 'Unauthorized' } },
+        {
+          success: false,
+          error: { message: 'Unauthorized' },
+        },
         { status: 401 }
       );
     }
+
+    const body = await request.json();
+    const validatedData = subscriptionSchema.parse(body);
 
     const subscription = new Subscription({
       ...validatedData,
@@ -131,19 +127,14 @@ export async function POST(request: NextRequest) {
 
     await subscription.save();
 
-    // Invalidate cache (clear CDN cache for this user's subscriptions)
-    const response = NextResponse.json(
+    // Don't cache POST responses - they're creating new data
+    return NextResponse.json(
       {
         success: true,
         data: subscription,
       },
       { status: 201 }
     );
-
-    // Tell CDN to invalidate cache
-    response.headers.set('Cache-Control', 'no-cache');
-
-    return response;
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
