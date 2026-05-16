@@ -89,4 +89,21 @@ export interface AuthResponse {
 export type UserWithoutPassword = Omit<
   IUser,
   'passwordHash' | 'emailVerificationToken' | 'passwordResetToken'
->;
+>
+
+export interface PaginationState {
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface PaginationResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

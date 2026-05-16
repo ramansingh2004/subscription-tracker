@@ -1,8 +1,8 @@
-import { lazy, Suspense, ComponentType } from 'react';
+import { lazy, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useCallback, useRef, useState, useEffect } from 'react';
 
-// ============ CODE SPLITTING WITH DYNAMIC IMPORT ============
+//CODE SPLITTING WITH DYNAMIC IMPORT 
 
 // Lazy load analytics page (only when user navigates to it)
 export const AnalyticsPage = dynamic(
@@ -40,7 +40,7 @@ export const SpendingChart = dynamic(
   }
 );
 
-// ============ IMAGE LAZY LOADING ============
+// IMAGE LAZY LOADING 
 
 import Image from 'next/image';
 
@@ -73,7 +73,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   );
 };
 
-// ============ SKELETON LOADERS ============
+// SKELETON LOADERS
 
 interface SkeletonLoaderProps {
   count?: number;
@@ -114,7 +114,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   );
 };
 
-// ============ SUSPENSE BOUNDARY ============
+// SUSPENSE BOUNDARY
 
 interface SuspenseBoundaryProps {
   children: React.ReactNode;
@@ -128,7 +128,7 @@ export const SuspenseBoundary: React.FC<SuspenseBoundaryProps> = ({
   return <Suspense fallback={fallback}>{children}</Suspense>;
 };
 
-// ============ INTERSECTION OBSERVER FOR LAZY LOADING ============
+// INTERSECTION OBSERVER FOR LAZY LOADING 
 
 export const useIntersectionObserver = (
   ref: React.RefObject<HTMLElement>
@@ -160,7 +160,7 @@ export const useIntersectionObserver = (
   return isVisible;
 };
 
-// ============ VIRTUAL LIST (For rendering 1000+ items) ============
+// VIRTUAL LIST (For rendering 1000+ items)
 
 interface VirtualListProps<T> {
   items: T[];
@@ -233,7 +233,7 @@ export const VirtualList = <T extends { _id: string }>({
   );
 };
 
-// ============ DEBOUNCED SEARCH ============
+// DEBOUNCED SEARCH
 
 interface UseDebouncedSearchResult<T> {
   results: T[];
@@ -269,7 +269,7 @@ export const useDebouncedSearch = <T,>(
   return { results, loading, search };
 };
 
-// ============ PREFETCH ON HOVER ============
+// PREFETCH ON HOVER
 
 interface UsePrefetchResult {
   onMouseEnter: () => void;

@@ -43,7 +43,7 @@ export const fetchCategoryBreakdown = async () => {
   return res.data.data;
 };
 
-// ============ HOOKS ============
+//  HOOKS 
 
 // Get paginated subscriptions with caching
 export const useSubscriptions = (page: number = 1, limit: number = 10) => {
@@ -94,7 +94,7 @@ export const useCategoryBreakdown = () => {
   });
 };
 
-// ============ MUTATIONS ============
+// MUTATIONS 
 
 // Create subscription
 export const useCreateSubscription = () => {
@@ -146,7 +146,7 @@ export const useDeleteSubscription = (id: string) => {
   });
 };
 
-// ============ PREFETCH HELPERS ============
+//  PREFETCH HELPERS 
 
 // Prefetch next page
 export const prefetchSubscriptionsPage = (

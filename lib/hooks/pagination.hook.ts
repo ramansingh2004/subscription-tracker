@@ -1,24 +1,8 @@
 import { useState, useCallback } from 'react';
 import apiClient from '@/lib/api-client';
+import { PaginationState, PaginationResponse } from '@/typesDefined';
 
-// ============ OFFSET-BASED PAGINATION ============
-
-interface PaginationState {
-  page: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
-}
-
-interface PaginationResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
+// OFFSET-BASED PAGINATION
 
 export const usePagination = <T>(initialLimit: number = 10) => {
   const [state, setState] = useState<PaginationState>({
@@ -97,7 +81,7 @@ export const usePagination = <T>(initialLimit: number = 10) => {
   };
 };
 
-// ============ CURSOR-BASED PAGINATION (Better for large datasets) ============
+// CURSOR-BASED PAGINATION (Better for large datasets)
 
 interface CursorPaginationState<T> {
   items: T[];
@@ -196,7 +180,7 @@ export const useCursorPagination = <T extends { _id: string }>(
   };
 };
 
-// ============ INFINITE SCROLL HOOK ============
+// INFINITE SCROLL HOOK
 
 export const useInfiniteScroll = <T extends { _id: string }>(
   limit: number = 10
