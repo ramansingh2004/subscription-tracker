@@ -20,7 +20,7 @@ export function useAuth() {
         }
 
         const res = await apiClient.get('/auth/me');
-        setUser(res.data.data.user);
+        setUser(res.data.data);
       } catch (error) {
         localStorage.removeItem('accessToken');
         clearAuth();

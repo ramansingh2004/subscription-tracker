@@ -49,12 +49,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        data: subscriptions,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
+        data: {
+          subscriptions,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
         },
       },
       { status: 200 }
