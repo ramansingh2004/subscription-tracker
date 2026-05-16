@@ -46,7 +46,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { success: true, data: subscription },
+      { success: true, data: { subscription } },
       { status: 200 }
     );
   } catch (error) {
@@ -99,7 +99,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { success: true, data: subscription },
+      { success: true, data: { subscription } },
       { status: 200 }
     );
   } catch (error) {
