@@ -1,135 +1,162 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useSubscriptions } from '@/lib/hooks';
-import Link from 'next/link';
-import { SubscriptionTable } from '@/components/subscriptions/SubscriptionTable';
+import { useState, useEffect, useRef } from 'react';
+import { useSubscriptions, prefetchSubscriptionsPage } from '@/lib/hooks/queries.hook';
+import { usePagination } from '@/lib/hooks/pagination.hook';
+import { SkeletonLoader, usePrefetch } from '@/lib/hooks/lazy-loading.hook';
+import { useQueryClient } from '@tanstack/react-query';
+import { SubscriptionCardWithActions } from '@/components/subscriptions/SubscriptionCardWithActions';
 import { SubscriptionFilter } from '@/components/subscriptions/SubscriptionFilter';
 import { ISubscription } from '@/typesDefined/index';
 
 export default function SubscriptionsPage() {
-  const { subscriptions, isLoading } = useSubscriptions();
-  const [category, setCategory] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [filters, setFilters] = useState({
+    category: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
 
-  // Filter subscriptions based on selected filters
-  const filtered = useMemo(() => {
-    return subscriptions.filter((sub: ISubscription) => {
-      // Category filter
-      if (category && sub.category !== category) return false;
+  // Fetch subscriptions with React Query
+  const { data, isLoading, error } = useSubscriptions(page, limit);
 
-      // Status filter
-      if (status && sub.status !== status) return false;
+  // Prefetch next page on hover
+  const nextPageRef = useRef<HTMLButtonElement>(null);
+  const { onMouseEnter: onNextPageHover } = usePrefetch(() => {
+    if (data?.pagination?.totalPages > page) {
+      prefetchSubscriptionsPage(queryClient, page + 1, limit);
+    }
+  });
 
-      // Search filter - search by name or category
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const matchesName = sub.name.toLowerCase().includes(term);
-        const matchesCategory = sub.category.toLowerCase().includes(term);
-        if (!matchesName && !matchesCategory) return false;
-      }
+  const subscriptions = data?.data || [];
+  const pagination = data?.pagination || {};
 
-      return true;
-    });
-  }, [subscriptions, category, status, searchTerm]);
+  const handleNextPage = () => {
+    if (pagination.totalPages && page < pagination.totalPages) {
+      setPage(page + 1);
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-            All Subscriptions
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Manage and organize all your digital subscriptions
-          </p>
-        </div>
-        <Link
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Subscriptions</h1>
+        <a
           href="/subscriptions/new"
-          className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium text-center md:text-left"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
         >
-          + Add Subscription
-        </Link>
+          Add Subscription
+        </a>
       </div>
 
-      {/* Filter Section */}
+      {/* Filters */}
       <SubscriptionFilter
-        onCategoryChange={setCategory}
-        onStatusChange={setStatus}
-        onSearchChange={setSearchTerm}
+        filters={filters}
+        onFilterChange={setFilters}
       />
 
-      {/* Results Info */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-        <p className="text-blue-900">
-          {isLoading ? (
-            'Loading subscriptions...'
-          ) : (
-            <>
-              Showing <span className="font-bold">{filtered.length}</span> of{' '}
-              <span className="font-bold">{subscriptions.length}</span>{' '}
-              subscriptions
-            </>
-          )}
-        </p>
-      </div>
-
-      {/* Table Section */}
-      {isLoading ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-          <p className="mt-4 text-gray-600">Loading your subscriptions...</p>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-3">
+          <SkeletonLoader count={5} height="120px" />
         </div>
-      ) : (
-        <SubscriptionTable
-          subscriptions={filtered}
-        />
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+          Failed to load subscriptions. Please try again.
+        </div>
       )}
 
       {/* Empty State */}
       {!isLoading && subscriptions.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="text-5xl mb-4">📋</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No subscriptions yet
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Start tracking your subscriptions by adding your first one!
-          </p>
-          <Link
-            href="/subscriptions/new"
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Add Your First Subscription
-          </Link>
+        <div className="text-center py-12">
+          <p className="text-gray-500">No subscriptions found</p>
+          <a href="/subscriptions/new" className="text-blue-600 hover:underline">
+            Add your first subscription
+          </a>
         </div>
       )}
 
-      {/* No Results State */}
-      {!isLoading && subscriptions.length > 0 && filtered.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="text-5xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No matching subscriptions
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Try adjusting your filters or search terms
-          </p>
-          <button
-            onClick={() => {
-              setCategory(null);
-              setStatus(null);
-              setSearchTerm('');
-            }}
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Clear Filters
-          </button>
-        </div>
+      {/* Subscriptions Grid */}
+      {!isLoading && subscriptions.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subscriptions.map((sub: ISubscription) => (
+              <SubscriptionCardWithActions
+                key={String(sub._id)}
+                subscription={sub}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between pt-6 border-t">
+            <div className="text-sm text-gray-600">
+              Showing {(page - 1) * limit + 1} to{' '}
+              {Math.min(page * limit, pagination.total)} of {pagination.total}{' '}
+              subscriptions
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Items per page */}
+              <select
+                value={limit}
+                onChange={(e) => handleLimitChange(parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+              </select>
+
+              {/* Page buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={page === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                {/* Page indicator */}
+                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                  <span className="font-medium">{page}</span> /{' '}
+                  <span>{pagination.totalPages || 1}</span>
+                </div>
+
+                {/* Next button with prefetch */}
+                <button
+                  ref={nextPageRef}
+                  onMouseEnter={onNextPageHover}
+                  onClick={handleNextPage}
+                  disabled={!pagination.totalPages || page >= pagination.totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
