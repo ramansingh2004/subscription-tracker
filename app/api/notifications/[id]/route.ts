@@ -5,7 +5,7 @@ import { verifyAccessToken } from '@/lib/jwt';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -27,8 +27,9 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const notification = await Notification.findOneAndUpdate(
-      { _id: params.id, userId: payload.userId },
+      { _id: id, userId: payload.userId },
       { read: true },
       { new: true }
     );
@@ -54,7 +55,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -76,8 +77,9 @@ export async function DELETE(
       );
     }
 
+    const { id } = await params;
     await Notification.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       userId: payload.userId,
     });
 

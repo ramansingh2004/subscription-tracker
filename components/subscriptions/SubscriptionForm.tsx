@@ -32,7 +32,7 @@ export function SubscriptionForm({ initialData, onSuccess }: Props) {
     handleSubmit,
     formState: { errors },
   } = useForm<SubscriptionInput>({
-    resolver: zodResolver(subscriptionSchema),
+    resolver: zodResolver(subscriptionSchema) as any,
     defaultValues: initialData,
   });
 

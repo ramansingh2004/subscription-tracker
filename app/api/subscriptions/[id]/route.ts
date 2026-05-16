@@ -19,7 +19,7 @@ function extractUserId(request: NextRequest) {
 // GET subscriptions/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = extractUserId(request);
@@ -32,8 +32,9 @@ export async function GET(
 
     await dbConnect();
 
+    const { id } = await params;
     const subscription = await Subscription.findOne({
-      _id: params.id,
+      _id: id,
       userId,
     });
 
@@ -60,7 +61,7 @@ export async function GET(
 // PUT /api/subscriptions/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = extractUserId(request);
@@ -83,8 +84,9 @@ export async function PUT(
       }),
     };
 
+    const { id } = await params;
     const subscription = await Subscription.findOneAndUpdate(
-      { _id: params.id, userId },
+      { _id: id, userId },
       updateData,
       { new: true, runValidators: true }
     );
@@ -119,7 +121,7 @@ export async function PUT(
 // DELETE subscriptions/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = extractUserId(request);
@@ -132,8 +134,9 @@ export async function DELETE(
 
     await dbConnect();
 
+    const { id } = await params;
     const subscription = await Subscription.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       userId,
     });
 
