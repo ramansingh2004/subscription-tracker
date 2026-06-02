@@ -6,9 +6,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'SubTrack - Subscription Manager',
   description: 'Track and manage all your subscriptions in one place',
-  icons: {
-    icon: '💰',
-  },
 };
 
 export default function RootLayout({

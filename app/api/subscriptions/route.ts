@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Subscription } from '@/models/Subscription.model';
 import { subscriptionSchema } from '@/lib/validation';
+import { verifyAccessToken } from '@/lib/jwt';
 import { ZodError } from 'zod';
+
+function extractUserId(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.slice(7);
+  const payload = verifyAccessToken(token);
+  return payload?.userId || null;
+}
 
 //GET ALL SUBSCRIPTIONS WITH PAGINATION
 
@@ -10,8 +22,8 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Get authenticated user ID from headers (set by middleware)
-    const userId = request.headers.get('x-user-id');
+    // Get authenticated user ID from Bearer token
+    const userId = extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         {
@@ -106,7 +118,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const userId = request.headers.get('x-user-id');
+    const userId = extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         {

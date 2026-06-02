@@ -52,7 +52,9 @@ export function useSubscriptions() {
     try {
       setIsLoading(true);
       const res = await apiClient.get('/subscriptions');
-      setSubscriptions(res.data.data.subscriptions);
+      const data = res.data.data;
+      // API returns data as an array directly, or as { subscriptions: [...] }
+      setSubscriptions(Array.isArray(data) ? data : data?.subscriptions ?? []);
       setError(null);
     } catch (err: any) {
       setError(err.message);

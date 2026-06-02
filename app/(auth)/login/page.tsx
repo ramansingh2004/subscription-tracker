@@ -36,7 +36,7 @@ export default function LoginPage() {
     setUser(user);
 
     toast.success('Login successful!');
-    window.location.href = '/';  // Use window.location instead of router.push
+    window.location.href = '/dashboard';  // Go directly to dashboard
   } catch (error: any) {
     toast.error(error.response?.data?.error?.message || 'Login failed');
   } finally {

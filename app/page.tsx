@@ -1,26 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
 
 export default function RootPage() {
-  const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-
   useEffect(() => {
-    // Check if user is authenticated
     const token = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('user');
 
     if (token && storedUser) {
-      // User is authenticated, redirect to dashboard
-      router.push('/dashboard');
+      window.location.replace('/dashboard');
     } else {
-      // User is not authenticated, redirect to login
-      router.push('/login');
+      window.location.replace('/login');
     }
-  }, [router, user]);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
