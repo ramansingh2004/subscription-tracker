@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60000,
   },
 
+  // Turbopack configuration to silence the custom webpack configuration warning/error
+  turbopack: {},
+
   // Bundle analysis (run with: ANALYZE=true npm run build)
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -52,15 +55,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'private, max-age=300, stale-while-revalidate=600',
-          },
-        ],
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
