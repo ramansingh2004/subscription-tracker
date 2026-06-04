@@ -2,9 +2,21 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // Properly construct the API base URL
 const getBaseURL = () => {
-  const appUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  // Ensure /api is appended
-  return appUrl.endsWith('/api') ? appUrl : `${appUrl}/api`;
+  // If explicitly configured in environment variables, use it.
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+
+  // If in the browser, default to relative path '/api'.
+  // This works dynamically across any domain (local, preview, production)
+  // without needing to define env variables in Vercel.
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+
+  // Server-side fallback (e.g., during build or server pre-rendering)
+  return 'http://localhost:3000/api';
 };
 
 const apiClient: AxiosInstance = axios.create({
