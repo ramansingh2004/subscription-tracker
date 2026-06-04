@@ -47,6 +47,9 @@ export interface ISubscription extends Document {
   accountEmail?: string;
   logoUrl?: string;
   tags?: string[];
+  reminderSent7Days: boolean;
+  reminderSentToday: boolean;
+  lastReminderSentDate: Date;
   createdAt: Date;
   updatedAt: Date;
 }

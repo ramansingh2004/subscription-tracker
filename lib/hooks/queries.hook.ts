@@ -1,10 +1,19 @@
 import { useQuery, useMutation, useQueryClient, QueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 
+export interface SubscriptionFilters {
+  page: number;
+  limit: number;
+  category?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+}
+
 // Query Keys
 export const subscriptionKeys = {
   all: ['subscriptions'] as const,
-  list: (page: number, limit: number) => [...subscriptionKeys.all, 'list', page, limit] as const,
+  list: (filters: SubscriptionFilters) => [...subscriptionKeys.all, 'list', filters] as const,
   detail: (id: string) => [...subscriptionKeys.all, 'detail', id] as const,
   upcoming: () => [...subscriptionKeys.all, 'upcoming'] as const,
 };
@@ -16,11 +25,11 @@ export const analyticsKeys = {
 };
 
 // Fetch Functions
-export const fetchSubscriptions = async (page: number = 1, limit: number = 10) => {
+export const fetchSubscriptions = async (filters: SubscriptionFilters) => {
   const res = await apiClient.get('/subscriptions', {
-    params: { page, limit },
+    params: filters,
   });
-  return res.data.data;
+  return res.data;
 };
 
 export const fetchSubscriptionById = async (id: string) => {
@@ -46,10 +55,10 @@ export const fetchCategoryBreakdown = async () => {
 //  HOOKS 
 
 // Get paginated subscriptions with caching
-export const useSubscriptions = (page: number = 1, limit: number = 10) => {
+export const useSubscriptions = (filters: SubscriptionFilters) => {
   return useQuery({
-    queryKey: subscriptionKeys.list(page, limit),
-    queryFn: () => fetchSubscriptions(page, limit),
+    queryKey: subscriptionKeys.list(filters),
+    queryFn: () => fetchSubscriptions(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
@@ -151,12 +160,11 @@ export const useDeleteSubscription = (id: string) => {
 // Prefetch next page
 export const prefetchSubscriptionsPage = (
   queryClient: QueryClient,
-  page: number,
-  limit: number
+  filters: SubscriptionFilters
 ) => {
   queryClient.prefetchQuery({
-    queryKey: subscriptionKeys.list(page, limit),
-    queryFn: () => fetchSubscriptions(page, limit),
+    queryKey: subscriptionKeys.list(filters),
+    queryFn: () => fetchSubscriptions(filters),
     staleTime: 5 * 60 * 1000,
   });
 };

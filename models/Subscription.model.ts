@@ -61,6 +61,16 @@ const subscriptionSchema = new Schema<ISubscription>(
     accountEmail: String,
     logoUrl: String,
     tags: [String],
+    // New fields for reminder tracking
+    reminderSent7Days: {
+      type: Boolean,
+      default: false,
+    },
+    reminderSentToday: {
+      type: Boolean,
+      default: false,
+    },
+    lastReminderSentDate: Date,
   },
   { timestamps: true }
 );
@@ -68,6 +78,8 @@ const subscriptionSchema = new Schema<ISubscription>(
 // Indexes for common queries
 subscriptionSchema.index({ userId: 1, status: 1 });
 subscriptionSchema.index({ userId: 1, nextRenewalDate: 1 });
+subscriptionSchema.index({ nextRenewalDate: 1, reminderSent7Days: 1 });
+subscriptionSchema.index({ nextRenewalDate: 1, reminderSentToday: 1 });
 
 export const Subscription =
   mongoose.models.Subscription ||

@@ -66,7 +66,14 @@ export default function SubscriptionsPage() {
   }, [search]);
 
   // Fetch subscriptions with React Query
-  const { data, isLoading, error, refetch } = useSubscriptions(page, limit);
+  const { data, isLoading, error, refetch } = useSubscriptions({
+    page,
+    limit,
+    category,
+    sortBy,
+    sortOrder,
+    search: debouncedSearch,
+  });
 
   // Type the data properly
   const subscriptions: Subscription[] = data?.data || [];
@@ -82,7 +89,14 @@ export default function SubscriptionsPage() {
   const nextPageRef = useRef<HTMLButtonElement>(null);
   const { onMouseEnter: onNextPageHover } = usePrefetch(() => {
     if (pagination.totalPages && page < pagination.totalPages) {
-      prefetchSubscriptionsPage(queryClient, page + 1, limit);
+      prefetchSubscriptionsPage(queryClient, {
+        page: page + 1,
+        limit,
+        category,
+        sortBy,
+        sortOrder,
+        search: debouncedSearch,
+      });
     }
   });
 
@@ -90,7 +104,14 @@ export default function SubscriptionsPage() {
   const prevPageRef = useRef<HTMLButtonElement>(null);
   const { onMouseEnter: onPrevPageHover } = usePrefetch(() => {
     if (page > 1) {
-      prefetchSubscriptionsPage(queryClient, page - 1, limit);
+      prefetchSubscriptionsPage(queryClient, {
+        page: page - 1,
+        limit,
+        category,
+        sortBy,
+        sortOrder,
+        search: debouncedSearch,
+      });
     }
   });
 
