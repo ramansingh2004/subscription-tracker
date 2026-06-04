@@ -93,12 +93,6 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set cache headers (5 minutes for browser, 10 minutes for CDN)
-    response.headers.set(
-      'Cache-Control',
-      'private, max-age=300, stale-while-revalidate=600'
-    );
-
     return response;
   } catch (error) {
     console.error('Get subscriptions error:', error);
