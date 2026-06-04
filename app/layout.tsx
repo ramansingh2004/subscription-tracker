@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-100">
+      <body className="bg-blue-50">
         <ReactQueryProvider>
           {children}
           <Toaster
@@ -23,25 +23,25 @@ export default function RootLayout({
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#363636',
+                background: '#283618',
                 color: '#fff',
               },
               success: {
                 style: {
-                  background: '#10b981',
+                  background: '#606C38',
                 },
                 iconTheme: {
                   primary: '#fff',
-                  secondary: '#10b981',
+                  secondary: '#606C38',
                 },
               },
               error: {
                 style: {
-                  background: '#ef4444',
+                  background: '#BC6C25',
                 },
                 iconTheme: {
                   primary: '#fff',
-                  secondary: '#ef4444',
+                  secondary: '#BC6C25',
                 },
               },
             }}

@@ -15,7 +15,7 @@ export function SubscriptionCard({ subscription }: Props) {
 
   return (
     <div className={`bg-white rounded-lg shadow hover:shadow-lg transition p-6 border-l-4 ${
-      isUrgent ? 'border-red-500' : 'border-blue-500'
+      isUrgent ? 'border-red-500' : 'border-[#606C38]'
     }`}>
       {/* Header */}
       <div className="flex justify-between items-start mb-4">

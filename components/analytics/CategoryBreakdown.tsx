@@ -19,13 +19,13 @@ interface Props {
 }
 
 const COLORS = [
-  '#3b82f6',
-  '#ef4444',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
+  '#283618',
+  '#606C38',
+  '#BC6C25',
+  '#DDA15E',
+  '#8B7355',
+  '#A0855B',
+  '#4A5D23',
 ];
 
 export function CategoryBreakdown({ categories }: Props) {

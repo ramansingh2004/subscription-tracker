@@ -59,9 +59,10 @@ export function SpendingChart() {
           <Line
             type="monotone"
             dataKey="cost"
-            stroke="#3b82f6"
+            stroke="#BC6C25"
             strokeWidth={2}
-            dot={{ fill: '#3b82f6' }}
+            dot={{ fill: '#BC6C25' }}
+            activeDot={{ r: 6, fill: '#283618', stroke: '#DDA15E', strokeWidth: 2 }}
             name="Monthly Spending"
           />
         </LineChart>

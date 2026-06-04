@@ -6,9 +6,9 @@ export function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
+    <header className="bg-white/80 backdrop-blur-md border-b border-blue-200/50 px-8 py-4 flex justify-between items-center sticky top-0 z-10">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-blue-600">
           Subscription Tracker
         </h1>
       </div>

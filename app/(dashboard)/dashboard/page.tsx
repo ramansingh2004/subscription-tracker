@@ -84,7 +84,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow p-8 text-white">
+      <div className="bg-gradient-to-r from-[#283618] to-[#606C38] rounded-lg shadow p-8 text-white">
         <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
