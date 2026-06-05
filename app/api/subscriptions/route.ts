@@ -4,6 +4,7 @@ import { Subscription } from '@/models/Subscription.model';
 import { subscriptionSchema } from '@/lib/validation';
 import { verifyAccessToken } from '@/lib/jwt';
 import { ZodError } from 'zod';
+import { checkAndProcessSubRenewals } from '@/lib/subscription-helper';
 
 function extractUserId(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -33,6 +34,9 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Dynamically check and process renewals/notifications for the user
+    await checkAndProcessSubRenewals(userId);
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
