@@ -13,7 +13,14 @@ const getBaseURL = () => {
       const isLocalhostEnv = envUrl.includes('localhost') || envUrl.includes('127.0.0.1');
       const isLocalhostPage = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       
-      if (!isLocalhostEnv || isLocalhostPage) {
+      if (isLocalhostPage) {
+        if (isLocalhostEnv) {
+          return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+        }
+        return '/api';
+      }
+      
+      if (!isLocalhostEnv) {
         return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
       }
     }

@@ -103,6 +103,9 @@ export async function PUT(req: NextRequest) {
         validated.emailNotifications;
     }
 
+    // Mark preferences as modified so mongoose saves the nested changes
+    user.markModified('preferences');
+
     // Save user
     await user.save();
 

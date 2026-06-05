@@ -9,6 +9,8 @@ import { useUpdateUserSettings, useUserSettings } from '@/lib/hooks/user-setting
 import { CurrencyConverter } from '@/lib/currency-service';
 import { useAuth } from '@/lib/hooks';
 
+import { useAuthStore } from '@/store/authStore';
+
 const settingsSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
@@ -23,6 +25,7 @@ type SettingsInput = z.infer<typeof settingsSchema>;
 
 export default function SettingsPage() {
   const { logout } = useAuth();
+  const { setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
   const [currencyPreview, setCurrencyPreview] = useState<string>('USD');
   const [previewAmount, setPreviewAmount] = useState<number>(9.99);
@@ -39,13 +42,13 @@ export default function SettingsPage() {
     watch,
   } = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: {
+    values: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       email: user?.email || '',
-      theme: user?.preferences?.theme || 'light',
+      theme: (user?.preferences?.theme as 'light' | 'dark') || 'light',
       currency: user?.preferences?.currency || 'USD',
-      notificationFrequency: user?.preferences?.notificationFrequency || 'daily',
+      notificationFrequency: (user?.preferences?.notificationFrequency as 'instant' | 'daily' | 'weekly') || 'daily',
       emailNotifications: user?.preferences?.emailNotifications ?? true,
     },
   });
@@ -54,7 +57,10 @@ export default function SettingsPage() {
 
   const onSubmit = async (data: SettingsInput) => {
     try {
-      await updateMutation.mutateAsync(data);
+      const response = await updateMutation.mutateAsync(data);
+      if (response?.data?.user) {
+        setUser(response.data.user);
+      }
       toast.success('Settings updated successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to update settings');
