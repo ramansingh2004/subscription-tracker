@@ -1,12 +1,13 @@
 'use client';
 
-import { useAuth } from '@/lib/hooks';
 import { useState } from 'react';
-import apiClient from '@/lib/api-client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { useUpdateUserSettings, useUserSettings } from '@/lib/hooks/user-settings';
+import { CurrencyConverter } from '@/lib/currency-service';
+import { useAuth } from '@/lib/hooks';
 
 const settingsSchema = z.object({
   firstName: z.string().min(2),
@@ -21,20 +22,27 @@ const settingsSchema = z.object({
 type SettingsInput = z.infer<typeof settingsSchema>;
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
+  const [currencyPreview, setCurrencyPreview] = useState<string>('USD');
+  const [previewAmount, setPreviewAmount] = useState<number>(9.99);
+
+  const { data: settingsData, isLoading: settingsLoading } = useUserSettings();
+  const updateMutation = useUpdateUserSettings();
+
+  const user = settingsData?.data?.user;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      email: user?.email,
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
       theme: user?.preferences?.theme || 'light',
       currency: user?.preferences?.currency || 'USD',
       notificationFrequency: user?.preferences?.notificationFrequency || 'daily',
@@ -42,17 +50,33 @@ export default function SettingsPage() {
     },
   });
 
+  const selectedCurrency = watch('currency');
+
   const onSubmit = async (data: SettingsInput) => {
-    setIsLoading(true);
     try {
-      await apiClient.put('/auth/settings', data);
+      await updateMutation.mutateAsync(data);
       toast.success('Settings updated successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to update settings');
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  // Calculate converted amount for preview
+  const convertedAmount = CurrencyConverter.convert(
+    previewAmount,
+    'USD',
+    selectedCurrency
+  );
+  const formattedAmount = CurrencyConverter.format(convertedAmount, selectedCurrency);
+
+  if (settingsLoading) {
+    return (
+      <div className="max-w-4xl space-y-8">
+        <div className="bg-gray-200 h-8 rounded w-1/4 animate-pulse"></div>
+        <div className="bg-white rounded-lg shadow p-6 h-96 animate-pulse"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -132,76 +156,130 @@ export default function SettingsPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                disabled={updateMutation.isPending}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition"
               >
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
           )}
 
           {activeTab === 'preferences' && (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Theme
-                </label>
-                <select
-                  {...register('theme')}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+              <div className="max-w-2xl space-y-6">
+                {/* Theme */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Theme
+                  </label>
+                  <select
+                    {...register('theme')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="light">☀️ Light</option>
+                    <option value="dark">🌙 Dark</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Currency
-                </label>
-                <select
-                  {...register('currency')}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="INR">INR (₹)</option>
-                </select>
-              </div>
+                {/* Currency with Preview */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Currency
+                    </label>
+                    <select
+                      {...register('currency')}
+                      onChange={(e) => setCurrencyPreview(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {CurrencyConverter.getSupportedCurrencies().map((curr) => (
+                        <option key={curr.code} value={curr.code}>
+                          {curr.symbol} {curr.code} - {curr.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notification Frequency
-                </label>
-                <select
-                  {...register('notificationFrequency')}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="instant">Instant</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </div>
+                  {/* Currency Conversion Preview */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-blue-900 mb-3 text-sm">
+                      Currency Preview
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Example amount (USD):</span>
+                        <span className="font-semibold text-gray-900">
+                          {CurrencyConverter.format(previewAmount, 'USD')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">In {selectedCurrency}:</span>
+                        <span className="font-semibold text-blue-600 text-lg">
+                          {formattedAmount}
+                        </span>
+                      </div>
+                      <div className="pt-2 mt-2 border-t border-blue-200">
+                        <p className="text-xs text-blue-700">
+                          Exchange rate: 1 USD = {CurrencyConverter.convert(1, 'USD', selectedCurrency)} {selectedCurrency}
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  {...register('emailNotifications')}
-                  type="checkbox"
-                  id="emailNotifs"
-                  className="w-4 h-4 rounded"
-                />
-                <label htmlFor="emailNotifs" className="text-sm text-gray-700">
-                  Receive email notifications
-                </label>
+                    {/* Adjust preview amount */}
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <label className="text-xs font-medium text-blue-900 mb-2 block">
+                        Test with different amount:
+                      </label>
+                      <input
+                        type="number"
+                        value={previewAmount}
+                        onChange={(e) => setPreviewAmount(parseFloat(e.target.value) || 0)}
+                        step="0.01"
+                        className="w-full px-3 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter amount in USD"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notification Frequency */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notification Frequency
+                  </label>
+                  <select
+                    {...register('notificationFrequency')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="instant">⚡ Instant</option>
+                    <option value="daily">📅 Daily</option>
+                    <option value="weekly">📆 Weekly</option>
+                  </select>
+                </div>
+
+                {/* Email Notifications */}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <input
+                    {...register('emailNotifications')}
+                    type="checkbox"
+                    id="emailNotifs"
+                    className="w-4 h-4 rounded text-blue-600"
+                  />
+                  <label htmlFor="emailNotifs" className="text-sm text-gray-700 flex-1">
+                    <span className="font-medium">Receive email notifications</span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Get alerts about subscription renewals and important updates
+                    </p>
+                  </label>
+                </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                disabled={updateMutation.isPending}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition"
               >
-                {isLoading ? 'Saving...' : 'Save Preferences'}
+                {updateMutation.isPending ? 'Saving...' : 'Save Preferences'}
               </button>
             </form>
           )}
@@ -222,7 +300,7 @@ export default function SettingsPage() {
                       logout();
                     }
                   }}
-                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium"
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium transition"
                 >
                   Logout
                 </button>
@@ -234,7 +312,7 @@ export default function SettingsPage() {
                         toast.error('Account deletion coming soon');
                       }
                     }}
-                    className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium"
+                    className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium transition"
                   >
                     Delete Account
                   </button>
