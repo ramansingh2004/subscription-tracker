@@ -3,8 +3,9 @@ import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import { useAuthStore } from '@/store/authStore';
 import { ISubscription } from '@/typesDefined';
+import { CurrencyConverter } from '@/lib/currency-service';
 
-// useAuth Hook
+// ============ useAuth Hook ============
 export function useAuth() {
   const router = useRouter();
   const { user, setUser, clearAuth } = useAuthStore();
@@ -42,7 +43,7 @@ export function useAuth() {
   return { user, isLoading, logout };
 }
 
-// useSubscriptions Hook
+// ============ useSubscriptions Hook ============
 export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<ISubscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +54,6 @@ export function useSubscriptions() {
       setIsLoading(true);
       const res = await apiClient.get('/subscriptions');
       const data = res.data.data;
-      // API returns data as an array directly, or as { subscriptions: [...] }
       setSubscriptions(Array.isArray(data) ? data : data?.subscriptions ?? []);
       setError(null);
     } catch (err: any) {
@@ -70,7 +70,43 @@ export function useSubscriptions() {
   return { subscriptions, isLoading, error, refetch: fetchSubscriptions };
 }
 
-// useNotifications Hook
+// ============ NEW: useCurrency Hook ============
+/**
+ * Hook to get current user's currency preference
+ * Automatically updates when currency changes in settings
+ */
+export function useCurrency() {
+  const currency = useAuthStore((state) => state.currency);
+  
+  return {
+    currency,
+    format: (amount: number, originalCurrency: string = 'USD') => {
+      const converted = CurrencyConverter.convert(
+        amount,
+        originalCurrency,
+        currency
+      );
+      return CurrencyConverter.format(converted, currency);
+    },
+    convert: (amount: number, fromCurrency: string = 'USD') => {
+      return CurrencyConverter.convert(amount, fromCurrency, currency);
+    },
+    formatWithOriginal: (amount: number, originalCurrency: string = 'USD') => {
+      const converted = CurrencyConverter.convert(
+        amount,
+        originalCurrency,
+        currency
+      );
+      return {
+        converted: CurrencyConverter.format(converted, currency),
+        original: CurrencyConverter.format(amount, originalCurrency),
+        display: `${CurrencyConverter.format(converted, currency)} (${CurrencyConverter.format(amount, originalCurrency)})`,
+      };
+    },
+  };
+}
+
+// ============ useNotifications Hook ============
 export function useNotifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);

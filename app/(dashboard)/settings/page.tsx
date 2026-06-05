@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import { useUpdateUserSettings, useUserSettings } from '@/lib/hooks/user-settings';
 import { CurrencyConverter } from '@/lib/currency-service';
 import { useAuth } from '@/lib/hooks';
-
 import { useAuthStore } from '@/store/authStore';
 
 const settingsSchema = z.object({
@@ -25,13 +24,15 @@ type SettingsInput = z.infer<typeof settingsSchema>;
 
 export default function SettingsPage() {
   const { logout } = useAuth();
-  const { setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
   const [currencyPreview, setCurrencyPreview] = useState<string>('USD');
   const [previewAmount, setPreviewAmount] = useState<number>(9.99);
 
   const { data: settingsData, isLoading: settingsLoading } = useUserSettings();
   const updateMutation = useUpdateUserSettings();
+  
+  // ← NEW: Get Zustand store functions
+  const { setCurrency, updateUserWithCurrency } = useAuthStore();
 
   const user = settingsData?.data?.user;
 
@@ -42,13 +43,13 @@ export default function SettingsPage() {
     watch,
   } = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
-    values: {
+    defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       email: user?.email || '',
-      theme: (user?.preferences?.theme as 'light' | 'dark') || 'light',
+      theme: user?.preferences?.theme || 'light',
       currency: user?.preferences?.currency || 'USD',
-      notificationFrequency: (user?.preferences?.notificationFrequency as 'instant' | 'daily' | 'weekly') || 'daily',
+      notificationFrequency: user?.preferences?.notificationFrequency || 'daily',
       emailNotifications: user?.preferences?.emailNotifications ?? true,
     },
   });
@@ -57,11 +58,22 @@ export default function SettingsPage() {
 
   const onSubmit = async (data: SettingsInput) => {
     try {
-      const response = await updateMutation.mutateAsync(data);
-      if (response?.data?.user) {
-        setUser(response.data.user);
+      const result = await updateMutation.mutateAsync(data);
+      
+      // ← NEW: Update global currency state immediately
+      setCurrency(data.currency);
+      
+      // ← NEW: Also update the full user object in store
+      if (result?.data?.user) {
+        updateUserWithCurrency(result.data.user);
       }
+      
       toast.success('Settings updated successfully');
+      
+      // ← NEW: Refetch all queries to reflect currency change
+      // This will cause dashboard, subscriptions, etc to update
+      window.location.reload();
+      
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to update settings');
     }
