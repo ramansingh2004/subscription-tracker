@@ -2,20 +2,30 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // Properly construct the API base URL
 const getBaseURL = () => {
-  // If explicitly configured in environment variables, use it.
+  // If in the browser, default to relative path '/api'.
+  // This works dynamically across any domain (local, preview, production)
+  // without needing to define env variables in Vercel.
+  if (typeof window !== 'undefined') {
+    // If NEXT_PUBLIC_API_URL is configured, only use it if it doesn't conflict
+    // (e.g. env points to localhost but page is on a remote domain).
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl) {
+      const isLocalhostEnv = envUrl.includes('localhost') || envUrl.includes('127.0.0.1');
+      const isLocalhostPage = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      if (!isLocalhostEnv || isLocalhostPage) {
+        return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+      }
+    }
+    return '/api';
+  }
+
+  // Server-side fallback (e.g., during build or server pre-rendering)
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (envUrl) {
     return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
 
-  // If in the browser, default to relative path '/api'.
-  // This works dynamically across any domain (local, preview, production)
-  // without needing to define env variables in Vercel.
-  if (typeof window !== 'undefined') {
-    return '/api';
-  }
-
-  // Server-side fallback (e.g., during build or server pre-rendering)
   return 'http://localhost:3000/api';
 };
 
