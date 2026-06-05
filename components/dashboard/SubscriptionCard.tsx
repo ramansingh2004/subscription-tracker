@@ -1,11 +1,13 @@
 import { ISubscription } from '@/typesDefined/index';
 import Link from 'next/link';
+import { CurrencyConverter } from '@/lib/currency-service';
 
 interface Props {
   subscription: ISubscription;
+  currency?: string;
 }
 
-export function SubscriptionCard({ subscription }: Props) {
+export function SubscriptionCard({ subscription, currency }: Props) {
   const daysUntilRenewal = Math.ceil(
     (new Date(subscription.nextRenewalDate).getTime() - Date.now()) /
       (1000 * 60 * 60 * 24)
@@ -41,7 +43,14 @@ export function SubscriptionCard({ subscription }: Props) {
         <div className="flex justify-between items-center">
           <span className="text-gray-600 text-sm">Cost:</span>
           <span className="font-semibold text-gray-900">
-            ${subscription.cost.toFixed(2)}
+            {CurrencyConverter.format(
+              CurrencyConverter.convert(
+                subscription.cost,
+                subscription.currency || 'USD',
+                currency || 'USD'
+              ),
+              currency || 'USD'
+            )}
           </span>
         </div>
         

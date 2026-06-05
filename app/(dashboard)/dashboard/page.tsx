@@ -1,6 +1,6 @@
 'use client';
 
-import { useSubscriptions } from '@/lib/hooks';
+import { useSubscriptions, useCurrency } from '@/lib/hooks';
 import Link from 'next/link';
 import { SubscriptionCard } from '@/components/dashboard/SubscriptionCard';
 import { QuickStats } from '@/components/dashboard/QuickStats';
@@ -8,6 +8,7 @@ import { UpcomingRenewals } from '@/components/dashboard/UpcomingRenewals';
 
 export default function DashboardPage() {
   const { subscriptions, isLoading } = useSubscriptions();
+  const { currency } = useCurrency(); // ← NEW: Get current currency
 
   if (isLoading) {
     return (
@@ -33,8 +34,8 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <QuickStats subscriptions={activeSubscriptions} />
+      {/* Quick Stats - Pass currency */}
+      <QuickStats subscriptions={activeSubscriptions} currency={currency} />
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -71,6 +72,7 @@ export default function DashboardPage() {
                 <SubscriptionCard
                   key={subscription._id.toString()}
                   subscription={subscription}
+                  currency={currency} // ← NEW: Pass currency to card
                 />
               ))}
             </div>
@@ -79,7 +81,7 @@ export default function DashboardPage() {
 
         {/* Upcoming Renewals */}
         <div className="lg:col-span-1">
-          <UpcomingRenewals subscriptions={activeSubscriptions} />
+          <UpcomingRenewals subscriptions={activeSubscriptions} currency={currency} />
         </div>
       </div>
 

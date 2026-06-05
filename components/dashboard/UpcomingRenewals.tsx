@@ -1,11 +1,13 @@
 import { ISubscription } from '@/typesDefined';
 import Link from 'next/link';
+import { CurrencyConverter } from '@/lib/currency-service';
 
 interface Props {
   subscriptions: ISubscription[];
+  currency?: string;
 }
 
-export function UpcomingRenewals({ subscriptions }: Props) {
+export function UpcomingRenewals({ subscriptions, currency }: Props) {
   const today = new Date();
   const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -76,7 +78,14 @@ export function UpcomingRenewals({ subscriptions }: Props) {
                   </div>
                 </div>
                 <p className="ml-2 font-semibold text-gray-900 text-right">
-                  ${sub.cost.toFixed(2)}
+                  {CurrencyConverter.format(
+                    CurrencyConverter.convert(
+                      sub.cost,
+                      sub.currency || 'USD',
+                      currency || 'USD'
+                    ),
+                    currency || 'USD'
+                  )}
                 </p>
               </li>
             );

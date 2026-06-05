@@ -1,24 +1,32 @@
 import { ISubscription } from '@/typesDefined/index';
+import { CurrencyConverter } from '@/lib/currency-service';
 
 interface Props {
   subscriptions: ISubscription[];
+  currency?: string;
 }
 
-export function QuickStats({ subscriptions }: Props) {
+export function QuickStats({ subscriptions, currency }: Props) {
   if (subscriptions.length === 0) {
     return null;
   }
 
-  // Calculate monthly cost
+  // Calculate monthly cost in the user's preferred currency
   const totalMonthly = subscriptions.reduce((sum, sub) => {
     if (sub.status !== 'active') return sum;
     
+    const costInPreferredCurrency = CurrencyConverter.convert(
+      sub.cost,
+      sub.currency || 'USD',
+      currency || 'USD'
+    );
+    
     if (sub.billingCycle === 'monthly') {
-      return sum + sub.cost;
+      return sum + costInPreferredCurrency;
     } else if (sub.billingCycle === 'yearly') {
-      return sum + sub.cost / 12;
+      return sum + costInPreferredCurrency / 12;
     } else if (sub.billingCycle === 'quarterly') {
-      return sum + sub.cost / 3;
+      return sum + costInPreferredCurrency / 3;
     }
     return sum;
   }, 0);
@@ -46,14 +54,14 @@ export function QuickStats({ subscriptions }: Props) {
     },
     {
       label: 'Monthly Spending',
-      value: `$${totalMonthly.toFixed(2)}`,
+      value: CurrencyConverter.format(totalMonthly, currency || 'USD'),
       icon: '💰',
       color: 'from-[#FEFAE0] to-[#F7E7C4]',
       textColor: 'text-[#BC6C25]',
     },
     {
       label: 'Yearly Spending',
-      value: `$${totalYearly.toFixed(2)}`,
+      value: CurrencyConverter.format(totalYearly, currency || 'USD'),
       icon: '📊',
       color: 'from-[#E2ECDB] to-[#C8D5B9]',
       textColor: 'text-[#283618]',
