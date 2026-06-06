@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSubscriptions, prefetchSubscriptionsPage } from '@/lib/hooks/queries.hook';
+import { useCurrency } from '@/lib/hooks';
 import { SkeletonLoader, usePrefetch } from '@/lib/hooks/lazy-loading.hook';
 import { useQueryClient } from '@tanstack/react-query';
+import { CurrencyConverter } from '@/lib/currency-service';
 import Link from 'next/link';
 
 interface Subscription {
@@ -16,17 +18,6 @@ interface Subscription {
   nextRenewalDate: string;
   autoRenew: boolean;
   website?: string;
-}
-
-interface SubscriptionsResponse {
-  data: Subscription[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasMore: boolean;
-  };
 }
 
 const CATEGORIES = [
@@ -43,6 +34,9 @@ const CATEGORIES = [
 
 export default function SubscriptionsPage() {
   const queryClient = useQueryClient();
+
+  // ← NEW: Get current currency from global state
+  const { currency, format, formatWithOriginal } = useCurrency();
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -146,7 +140,7 @@ export default function SubscriptionsPage() {
     setPage(1); // Reset to page 1
   };
 
-  // Calculate total monthly cost
+  // ← UPDATED: Calculate total monthly cost in user's currency
   const totalMonthlyCost = subscriptions.reduce((sum, sub) => {
     const monthlyCost =
       sub.billingCycle === 'yearly'
@@ -154,7 +148,9 @@ export default function SubscriptionsPage() {
         : sub.billingCycle === 'quarterly'
           ? sub.cost / 3
           : sub.cost;
-    return sum + monthlyCost;
+    // Convert to user's currency
+    const converted = CurrencyConverter.convert(monthlyCost, sub.currency, currency);
+    return sum + converted;
   }, 0);
 
   return (
@@ -164,7 +160,7 @@ export default function SubscriptionsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Subscriptions</h1>
           <p className="text-gray-600 mt-1">
-            {pagination.total} total • ${totalMonthlyCost.toFixed(2)}/month
+            {pagination.total} total • {format(totalMonthlyCost)}/month
           </p>
         </div>
         <Link
@@ -298,6 +294,9 @@ export default function SubscriptionsPage() {
                   const isUpcomingSoon =
                     renewalDate.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
+                  // ← UPDATED: Format cost with currency conversion
+                  const prices = formatWithOriginal(sub.cost, sub.currency);
+
                   return (
                     <tr
                       key={sub._id}
@@ -312,7 +311,12 @@ export default function SubscriptionsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {sub.currency} {sub.cost}
+                        <div className="flex flex-col">
+                          <span>{prices.converted}</span>
+                          <span className="text-xs text-gray-500 font-normal">
+                            ({prices.original})
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 capitalize">
                         {sub.billingCycle}

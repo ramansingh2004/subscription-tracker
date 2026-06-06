@@ -24,27 +24,59 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const result = await Subscription.aggregate([
-      { $match: { userId: payload.userId, status: 'active' } },
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          totalCost: { $sum: '$cost' },
-        },
-      },
-      { $sort: { totalCost: -1 } },
-    ]);
+    const subscriptions = await Subscription.find({
+      userId: payload.userId,
+      status: 'active',
+    });
+
+    const categoryGroups: Record<string, { category: string; count: number; cost: number; monthlyEquivalent: number }> = {};
+    let totalMonthlyEquivalent = 0;
+
+    for (const sub of subscriptions) {
+      const cat = sub.category || 'Other';
+      if (!categoryGroups[cat]) {
+        categoryGroups[cat] = {
+          category: cat,
+          count: 0,
+          cost: 0,
+          monthlyEquivalent: 0,
+        };
+      }
+
+      categoryGroups[cat].count += 1;
+      categoryGroups[cat].cost += sub.cost;
+
+      let subMonthly = 0;
+      if (sub.billingCycle === 'monthly') {
+        subMonthly = sub.cost;
+      } else if (sub.billingCycle === 'yearly') {
+        subMonthly = sub.cost / 12;
+      } else if (sub.billingCycle === 'quarterly') {
+        subMonthly = sub.cost / 3;
+      }
+      categoryGroups[cat].monthlyEquivalent += subMonthly;
+      totalMonthlyEquivalent += subMonthly;
+    }
+
+    const categoriesList = Object.values(categoryGroups).map((group) => {
+      const percentage = totalMonthlyEquivalent > 0
+        ? Math.round((group.monthlyEquivalent / totalMonthlyEquivalent) * 1000) / 10
+        : 0;
+
+      return {
+        category: group.category,
+        count: group.count,
+        cost: Math.round(group.cost * 100) / 100,
+        totalCost: Math.round(group.cost * 100) / 100,
+        monthlyEquivalent: Math.round(group.monthlyEquivalent * 100) / 100,
+        percentage,
+      };
+    }).sort((a, b) => b.monthlyEquivalent - a.monthlyEquivalent);
 
     return NextResponse.json({
       success: true,
       data: {
-        categories: result.map(cat => ({
-          category: cat._id,
-          count: cat.count,
-          totalCost: Math.round(cat.totalCost * 100) / 100,
-          percentage: 0, // Will be calculated on client
-        })),
+        categories: categoriesList,
       },
     });
   } catch (error: any) {

@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { CurrencyConverter } from '@/lib/currency-service';
 
 interface Category {
   category: string;
@@ -16,6 +17,7 @@ interface Category {
 
 interface Props {
   categories: Category[];
+  currency?: string;
 }
 
 const COLORS = [
@@ -28,7 +30,7 @@ const COLORS = [
   '#4A5D23',
 ];
 
-export function CategoryBreakdown({ categories }: Props) {
+export function CategoryBreakdown({ categories, currency = 'USD' }: Props) {
   const totalCost = categories.reduce((sum, cat) => sum + cat.totalCost, 0);
 
   const data = categories.map((cat) => ({
@@ -51,7 +53,7 @@ export function CategoryBreakdown({ categories }: Props) {
             cy="50%"
             labelLine={false}
             label={({ name, value }) =>
-              `${name} ($${value.toFixed(0)})`
+              `${name} (${CurrencyConverter.getSymbol(currency)}${value.toFixed(0)})`
             }
             outerRadius={80}
             fill="#8884d8"
@@ -64,7 +66,7 @@ export function CategoryBreakdown({ categories }: Props) {
               />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => `$${typeof value === 'number' ? value.toFixed(2) : '0.00'}`} />
+          <Tooltip formatter={(value) => typeof value === 'number' ? CurrencyConverter.format(value, currency) : '0.00'} />
         </PieChart>
       </ResponsiveContainer>
 
@@ -88,7 +90,7 @@ export function CategoryBreakdown({ categories }: Props) {
               </div>
             </div>
             <p className="font-semibold text-gray-900">
-              ${cat.totalCost.toFixed(2)} (
+              {CurrencyConverter.format(cat.totalCost, currency)} (
               {((cat.totalCost / totalCost) * 100).toFixed(1)}%)
             </p>
           </div>

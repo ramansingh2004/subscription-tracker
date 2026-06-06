@@ -11,8 +11,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { CurrencyConverter } from '@/lib/currency-service';
 
-export function SpendingChart() {
+interface SpendingChartProps {
+  currency?: string;
+}
+
+export function SpendingChart({ currency = 'USD' }: SpendingChartProps) {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,9 +29,11 @@ export function SpendingChart() {
         for (let i = 11; i >= 0; i--) {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
+          const usdCost = Math.random() * 200 + 50; // Simulated USD data
+          const convertedCost = CurrencyConverter.convert(usdCost, 'USD', currency);
           months.push({
             month: date.toLocaleDateString('en-US', { month: 'short' }),
-            cost: Math.random() * 200 + 50, // Simulated data
+            cost: convertedCost,
           });
         }
         setData(months);
@@ -38,7 +45,7 @@ export function SpendingChart() {
     };
 
     fetchTrends();
-  }, []);
+  }, [currency]);
 
   if (isLoading) {
     return <div className="bg-white p-6 rounded-lg shadow h-80">Loading...</div>;
@@ -54,7 +61,7 @@ export function SpendingChart() {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="month" />
           <YAxis />
-          <Tooltip formatter={(value) => `$${typeof value === 'number' ? value.toFixed(2) : '0.00'}`} />
+          <Tooltip formatter={(value) => typeof value === 'number' ? CurrencyConverter.format(value, currency) : '0.00'} />
           <Legend />
           <Line
             type="monotone"

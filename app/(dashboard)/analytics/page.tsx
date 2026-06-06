@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
+import { useCurrency } from '@/lib/hooks';
+import { CurrencyConverter } from '@/lib/currency-service';
 import { SpendingChart } from '@/components/analytics/SpendingChart';
 import { CategoryBreakdown } from '@/components/analytics/CategoryBreakdown';
 
 export default function AnalyticsPage() {
+  const { currency, format } = useCurrency(); // ← NEW: Get current currency
+  
   const [summary, setSummary] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,44 +34,158 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, []);
 
-  if (isLoading) return <div>Loading analytics...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // ← UPDATED: Convert analytics to user's currency
+  const convertedMonthlyCost = summary
+    ? CurrencyConverter.convert(summary.monthlyCost, 'USD', currency)
+    : 0;
+
+  const convertedYearlyCost = summary
+    ? CurrencyConverter.convert(summary.yearlyCost, 'USD', currency)
+    : 0;
+
+  // ← UPDATED: Convert category breakdown to user's currency
+  const convertedCategories = categories.map((cat) => ({
+    ...cat,
+    monthlyEquivalent: CurrencyConverter.convert(
+      cat.monthlyEquivalent,
+      'USD',
+      currency
+    ),
+    cost: CurrencyConverter.convert(cat.cost, 'USD', currency),
+    totalCost: CurrencyConverter.convert(cat.totalCost, 'USD', currency),
+  }));
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+        <p className="text-gray-600 mt-2">
+          Your subscription spending overview (Currency: {currency})
+        </p>
+      </div>
 
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* Total Subscriptions */}
+        <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition">
           <h3 className="text-gray-600 text-sm font-medium">
             Total Subscriptions
           </h3>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {summary?.totalSubscriptions}
+            {summary?.totalSubscriptions || 0}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            {summary?.activeSubscriptions || 0} active
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* Monthly Cost */}
+        <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition">
           <h3 className="text-gray-600 text-sm font-medium">
             Monthly Cost
           </h3>
+          {/* ← UPDATED: Use formatted converted cost */}
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            ${summary?.monthlyCost}
+            {format(convertedMonthlyCost)}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Average per month
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        {/* Yearly Cost */}
+        <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition">
           <h3 className="text-gray-600 text-sm font-medium">
             Yearly Cost
           </h3>
+          {/* ← UPDATED: Use formatted converted cost */}
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            ${summary?.yearlyCost}
+            {format(convertedYearlyCost)}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Projected annual spending
           </p>
         </div>
       </div>
 
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <SpendingChart />
-        <CategoryBreakdown categories={categories} />
+        {/* Spending Trend Chart */}
+        <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">
+            Spending Trend (Last 12 Months)
+          </h2>
+          <SpendingChart currency={currency} />
+        </div>
+
+        {/* Category Breakdown Chart */}
+        <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">
+            Spending by Category
+          </h2>
+          <CategoryBreakdown categories={convertedCategories} currency={currency} />
+        </div>
+      </div>
+
+      {/* Detailed Category Breakdown Table */}
+      <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">
+          Category Breakdown Details
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-300">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Subscriptions
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Monthly Cost
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Total Cost
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Percentage
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {convertedCategories.map((cat, idx) => (
+                <tr key={idx} className="border-b border-gray-300 hover:bg-gray-50 transition">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    {cat.category}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {cat.count} subscription{cat.count > 1 ? 's' : ''}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                    {/* ← UPDATED: Use formatted cost */}
+                    {format(cat.monthlyEquivalent)}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                    {/* ← UPDATED: Use formatted cost */}
+                    {format(cat.cost)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {cat.percentage}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
