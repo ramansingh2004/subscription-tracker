@@ -9,6 +9,7 @@ import {
   type SubscriptionInput,
 } from '@/lib/validation';
 import toast from 'react-hot-toast';
+import { CurrencyConverter } from '@/lib/currency-service';
 
 interface Props {
   initialData?: any;
@@ -95,20 +96,41 @@ export function SubscriptionForm({ initialData, onSuccess }: Props) {
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Cost *
-        </label>
-        <input
-          {...register('cost', { valueAsNumber: true })}
-          type="number"
-          step="0.01"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
-          placeholder="9.99"
-        />
-        {errors.cost && (
-          <p className="mt-1 text-sm text-red-600">{errors.cost.message}</p>
-        )}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Cost *
+          </label>
+          <input
+            {...register('cost', { valueAsNumber: true })}
+            type="number"
+            step="0.01"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
+            placeholder="9.99"
+          />
+          {errors.cost && (
+            <p className="mt-1 text-sm text-red-600">{errors.cost.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Currency *
+          </label>
+          <select
+            {...register('currency')}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
+          >
+            {CurrencyConverter.getSupportedCurrencies().map((cur) => (
+              <option key={cur.code} value={cur.code}>
+                {cur.symbol} {cur.code}
+              </option>
+            ))}
+          </select>
+          {errors.currency && (
+            <p className="mt-1 text-sm text-red-600">{errors.currency.message}</p>
+          )}
+        </div>
       </div>
 
       <div>
