@@ -3,6 +3,20 @@ import dbConnect from '@/lib/mongodb';
 import {Subscription} from '@/models/Subscription.model';
 import { verifyAccessToken } from '@/lib/jwt';
 
+// Exchange rates (base: USD) — must match lib/currency-service.ts
+const EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+  INR: 83.12,
+};
+
+/** Convert an amount from any supported currency to USD */
+function toUSD(amount: number, fromCurrency: string): number {
+  const rate = EXCHANGE_RATES[fromCurrency] || 1;
+  return amount / rate;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -43,16 +57,18 @@ export async function GET(req: NextRequest) {
         };
       }
 
+      const costInUSD = toUSD(sub.cost, sub.currency || 'USD');
+
       categoryGroups[cat].count += 1;
-      categoryGroups[cat].cost += sub.cost;
+      categoryGroups[cat].cost += costInUSD;
 
       let subMonthly = 0;
       if (sub.billingCycle === 'monthly') {
-        subMonthly = sub.cost;
+        subMonthly = costInUSD;
       } else if (sub.billingCycle === 'yearly') {
-        subMonthly = sub.cost / 12;
+        subMonthly = costInUSD / 12;
       } else if (sub.billingCycle === 'quarterly') {
-        subMonthly = sub.cost / 3;
+        subMonthly = costInUSD / 3;
       }
       categoryGroups[cat].monthlyEquivalent += subMonthly;
       totalMonthlyEquivalent += subMonthly;

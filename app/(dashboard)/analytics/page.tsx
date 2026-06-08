@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
 import { useCurrency } from '@/lib/hooks';
 import { CurrencyConverter } from '@/lib/currency-service';
+
 import { SpendingChart } from '@/components/analytics/SpendingChart';
 import { CategoryBreakdown } from '@/components/analytics/CategoryBreakdown';
 
@@ -42,25 +43,13 @@ export default function AnalyticsPage() {
     );
   }
 
-  // ← UPDATED: Convert analytics to user's currency
-  const convertedMonthlyCost = summary
-    ? CurrencyConverter.convert(summary.monthlyCost, 'USD', currency)
-    : 0;
-
-  const convertedYearlyCost = summary
-    ? CurrencyConverter.convert(summary.yearlyCost, 'USD', currency)
-    : 0;
-
-  // ← UPDATED: Convert category breakdown to user's currency
-  const convertedCategories = categories.map((cat) => ({
+  // Convert category data from USD to user's currency for the CategoryBreakdown chart
+  // (CategoryBreakdown uses CurrencyConverter.format which only formats, doesn't convert)
+  const convertedCategories = categories.map((cat: any) => ({
     ...cat,
-    monthlyEquivalent: CurrencyConverter.convert(
-      cat.monthlyEquivalent,
-      'USD',
-      currency
-    ),
-    cost: CurrencyConverter.convert(cat.cost, 'USD', currency),
     totalCost: CurrencyConverter.convert(cat.totalCost, 'USD', currency),
+    cost: CurrencyConverter.convert(cat.cost, 'USD', currency),
+    monthlyEquivalent: CurrencyConverter.convert(cat.monthlyEquivalent, 'USD', currency),
   }));
 
   return (
@@ -92,9 +81,8 @@ export default function AnalyticsPage() {
           <h3 className="text-gray-600 text-sm font-medium">
             Monthly Cost
           </h3>
-          {/* ← UPDATED: Use formatted converted cost */}
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {format(convertedMonthlyCost)}
+            {format(summary?.monthlyCost || 0)}
           </p>
           <p className="text-xs text-gray-500 mt-2">
             Average per month
@@ -106,9 +94,8 @@ export default function AnalyticsPage() {
           <h3 className="text-gray-600 text-sm font-medium">
             Yearly Cost
           </h3>
-          {/* ← UPDATED: Use formatted converted cost */}
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {format(convertedYearlyCost)}
+            {format(summary?.yearlyCost || 0)}
           </p>
           <p className="text-xs text-gray-500 mt-2">
             Projected annual spending
@@ -162,7 +149,7 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {convertedCategories.map((cat, idx) => (
+              {categories.map((cat, idx) => (
                 <tr key={idx} className="border-b border-gray-300 hover:bg-gray-50 transition">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {cat.category}

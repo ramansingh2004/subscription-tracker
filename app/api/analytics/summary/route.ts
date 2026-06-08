@@ -3,6 +3,20 @@ import dbConnect from '@/lib/mongodb';
 import {Subscription} from '@/models/Subscription.model';
 import { verifyAccessToken } from '@/lib/jwt';
 
+// Exchange rates (base: USD) — must match lib/currency-service.ts
+const EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+  INR: 83.12,
+};
+
+/** Convert an amount from any supported currency to USD */
+function toUSD(amount: number, fromCurrency: string): number {
+  const rate = EXCHANGE_RATES[fromCurrency] || 1;
+  return amount / rate;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -29,18 +43,20 @@ export async function GET(req: NextRequest) {
       status: 'active',
     });
 
-    // Calculate monthly cost
+    // Calculate monthly cost — normalize every subscription to USD first
     const monthlyCost = subscriptions.reduce((sum, sub) => {
-      if (sub.billingCycle === 'monthly') return sum + sub.cost;
-      if (sub.billingCycle === 'yearly') return sum + sub.cost / 12;
-      if (sub.billingCycle === 'quarterly') return sum + sub.cost / 3;
+      const costInUSD = toUSD(sub.cost, sub.currency || 'USD');
+      if (sub.billingCycle === 'monthly') return sum + costInUSD;
+      if (sub.billingCycle === 'yearly') return sum + costInUSD / 12;
+      if (sub.billingCycle === 'quarterly') return sum + costInUSD / 3;
       return sum;
     }, 0);
 
     const yearlyCost = subscriptions.reduce((sum, sub) => {
-      if (sub.billingCycle === 'yearly') return sum + sub.cost;
-      if (sub.billingCycle === 'monthly') return sum + sub.cost * 12;
-      if (sub.billingCycle === 'quarterly') return sum + sub.cost * 4;
+      const costInUSD = toUSD(sub.cost, sub.currency || 'USD');
+      if (sub.billingCycle === 'yearly') return sum + costInUSD;
+      if (sub.billingCycle === 'monthly') return sum + costInUSD * 12;
+      if (sub.billingCycle === 'quarterly') return sum + costInUSD * 4;
       return sum;
     }, 0);
 
@@ -51,7 +67,9 @@ export async function GET(req: NextRequest) {
           totalSubscriptions: subscriptions.length,
           monthlyCost: Math.round(monthlyCost * 100) / 100,
           yearlyCost: Math.round(yearlyCost * 100) / 100,
-          averagePerSubscription: Math.round((monthlyCost / subscriptions.length) * 100) / 100,
+          averagePerSubscription: subscriptions.length
+            ? Math.round((monthlyCost / subscriptions.length) * 100) / 100
+            : 0,
         },
       },
     });
