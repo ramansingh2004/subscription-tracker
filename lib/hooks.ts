@@ -4,6 +4,7 @@ import apiClient from '@/lib/api-client';
 import { useAuthStore } from '@/store/authStore';
 import { ISubscription } from '@/typesDefined';
 import { CurrencyConverter } from '@/lib/currency-service';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ============ useAuth Hook ============
 export function useAuth() {
@@ -70,12 +71,14 @@ export function useSubscriptions() {
   return { subscriptions, isLoading, error, refetch: fetchSubscriptions };
 }
 
-// ============ NEW: useCurrency Hook ============
+// ============ useCurrency Hook ============
 /**
  * Hook to get current user's currency preference
  * Automatically updates when currency changes in settings
+ * Uses Zustand store for global state management
  */
 export function useCurrency() {
+  // ← Listen to Zustand store for currency changes
   const currency = useAuthStore((state) => state.currency);
   
   return {
@@ -148,4 +151,18 @@ export function useNotifications() {
   }, []);
 
   return { notifications, unreadCount, isLoading, markAsRead };
+}
+
+// ============ useInvalidateQueries Hook (Helper) ============
+/**
+ * Helper hook to invalidate all React Query caches
+ * Useful when currency changes and you want to refetch all data
+ */
+export function useInvalidateQueries() {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    // Invalidate all queries to refetch with new currency
+    queryClient.invalidateQueries();
+  }, [queryClient]);
 }

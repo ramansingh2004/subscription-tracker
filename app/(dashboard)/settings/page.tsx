@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { useUpdateUserSettings, useUserSettings } from '@/lib/hooks/user-settings';
 import { CurrencyConverter } from '@/lib/currency-service';
-import { useAuth } from '@/lib/hooks';
+import { useAuth, useCurrency } from '@/lib/hooks';
 import { useAuthStore } from '@/store/authStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 const settingsSchema = z.object({
   firstName: z.string().min(2),
@@ -24,6 +25,7 @@ type SettingsInput = z.infer<typeof settingsSchema>;
 
 export default function SettingsPage() {
   const { logout } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
   const [currencyPreview, setCurrencyPreview] = useState<string>('USD');
   const [previewAmount, setPreviewAmount] = useState<number>(9.99);
@@ -31,8 +33,9 @@ export default function SettingsPage() {
   const { data: settingsData, isLoading: settingsLoading } = useUserSettings();
   const updateMutation = useUpdateUserSettings();
   
-  // ← NEW: Get Zustand store functions
+  // ← Get Zustand store functions
   const { setCurrency, updateUserWithCurrency } = useAuthStore();
+  const { currency: currentCurrency } = useCurrency(); // ← Get current currency
 
   const user = settingsData?.data?.user;
 
@@ -41,6 +44,7 @@ export default function SettingsPage() {
     handleSubmit,
     formState: { errors },
     watch,
+    reset,
   } = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -56,25 +60,51 @@ export default function SettingsPage() {
 
   const selectedCurrency = watch('currency');
 
+  // Update form when user data loads
+  useEffect(() => {
+    if (user) {
+      reset({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        theme: user.preferences?.theme || 'light',
+        currency: user.preferences?.currency || 'USD',
+        notificationFrequency: user.preferences?.notificationFrequency || 'daily',
+        emailNotifications: user.preferences?.emailNotifications ?? true,
+      });
+      setCurrencyPreview(user.preferences?.currency || 'USD');
+    }
+  }, [user, reset]);
+
   const onSubmit = async (data: SettingsInput) => {
     try {
+      console.log('Submitting settings:', data);
+      
       const result = await updateMutation.mutateAsync(data);
       
-      // ← NEW: Update global currency state immediately
-      setCurrency(data.currency);
-      
-      // ← NEW: Also update the full user object in store
+      console.log('Update result:', result);
+      console.log('Updated user:', result?.data?.user);
+
+      // ← CRITICAL: Update Zustand store immediately
       if (result?.data?.user) {
+        console.log('Updating Zustand with user:', result.data.user);
         updateUserWithCurrency(result.data.user);
       }
-      
+
+      // ← Also explicitly set currency
+      setCurrency(data.currency);
+
+      console.log('Currency set to:', data.currency);
+
+      // ← Invalidate all React Query caches so pages refetch with new currency
+      queryClient.invalidateQueries();
+
       toast.success('Settings updated successfully');
       
-      // ← NEW: Refetch all queries to reflect currency change
-      // This will cause dashboard, subscriptions, etc to update
-      window.location.reload();
+      // ← NO page reload - let Zustand trigger re-renders naturally
       
     } catch (error: any) {
+      console.error('Settings error:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to update settings');
     }
   };
@@ -101,7 +131,12 @@ export default function SettingsPage() {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account preferences and settings</p>
+        <p className="text-gray-600 mt-2">
+          Manage your account preferences and settings
+          {currentCurrency && (
+            <span className="text-blue-600 font-medium"> • Current currency: {currentCurrency}</span>
+          )}
+        </p>
       </div>
 
       {/* Tabs */}
@@ -207,7 +242,9 @@ export default function SettingsPage() {
                     </label>
                     <select
                       {...register('currency')}
-                      onChange={(e) => setCurrencyPreview(e.target.value)}
+                      onChange={(e) => {
+                        setCurrencyPreview(e.target.value);
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {CurrencyConverter.getSupportedCurrencies().map((curr) => (
