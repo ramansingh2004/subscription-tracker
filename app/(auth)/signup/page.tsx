@@ -14,46 +14,30 @@ export default function SignupPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
+    mode: 'onBlur', // Validate on blur for better UX
   });
+
+  const password = watch('password');
 
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
-    setDebugInfo('');
 
     try {
-      const msg1 = `📝 Form data: ${JSON.stringify(data)}`;
-      console.log(msg1);
-      setDebugInfo(msg1);
+      // Send only required fields to backend
+      const { confirmPassword, ...submitData } = data;
 
-      // Your apiClient baseURL is: http://localhost:3000/api (or NEXT_PUBLIC_API_URL/api)
-      // So we call /auth/register (not /api/auth/register) to get the full path
-      const msg2 = `🌐 API Base: ${apiClient.defaults.baseURL}`;
-      console.log(msg2);
-      setDebugInfo(prev => prev + '\n' + msg2);
-
-      const msg3 = `📤 POST /auth/register`;
-      console.log(msg3);
-      setDebugInfo(prev => prev + '\n' + msg3);
-
-      const res = await apiClient.post('/auth/register', data);
-
-      const msg4 = `✅ Status: ${res.status}`;
-      console.log(msg4);
-      setDebugInfo(prev => prev + '\n' + msg4);
-
-      console.log('Response:', res.data);
+      const res = await apiClient.post('/auth/register', submitData);
       const { accessToken, refreshToken, user } = res.data.data;
 
       if (!accessToken || !user) {
-        setDebugInfo(prev => prev + '\n' + '❌ Missing accessToken or user in response');
         throw new Error('Invalid response - missing token or user data');
       }
 
@@ -67,28 +51,9 @@ export default function SignupPage() {
 
       toast.success('Account created successfully!');
 
-      setDebugInfo(prev => prev + '\n' + '✅ Redirecting to /dashboard...');
       await new Promise(resolve => setTimeout(resolve, 300));
       await router.push('/dashboard');
-
     } catch (error: any) {
-      console.error('❌ Signup Error:', error);
-      setIsLoading(false);
-
-      let debugMsg = `\n❌ ERROR`;
-
-      if (error.response) {
-        debugMsg += `\nStatus: ${error.response.status}`;
-        debugMsg += `\nURL attempted: ${error.config?.url}`;
-        debugMsg += `\nBase URL: ${error.config?.baseURL}`;
-        debugMsg += `\nFull URL: ${error.config?.baseURL}${error.config?.url}`;
-        debugMsg += `\nResponse: ${JSON.stringify(error.response.data)}`;
-      } else {
-        debugMsg += `\nMessage: ${error.message}`;
-      }
-
-      setDebugInfo(prev => prev + debugMsg);
-
       const errorMessage =
         error.response?.data?.error?.message ||
         error.response?.data?.message ||
@@ -96,6 +61,8 @@ export default function SignupPage() {
         'Registration failed';
 
       toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -109,104 +76,168 @@ export default function SignupPage() {
         </p>
       </div>
 
-      {debugInfo && (
-        <div className="p-3 bg-cyan-50 border border-cyan-300 rounded-lg">
-          <h3 className="text-xs font-bold text-cyan-900 mb-2">Debug Info:</h3>
-          <p className="text-xs text-cyan-900 font-mono whitespace-pre-wrap break-words">
-            {debugInfo}
-          </p>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* First Name & Last Name */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              First Name
+              First Name *
             </label>
             <input
               {...register('firstName')}
               type="text"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`mt-1 block w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.firstName
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               placeholder="John"
             />
             {errors.firstName && (
-              <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p>
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                ⚠️ {errors.firstName.message}
+              </p>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Last Name
+              Last Name *
             </label>
             <input
               {...register('lastName')}
               type="text"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`mt-1 block w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.lastName
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               placeholder="Doe"
             />
             {errors.lastName && (
-              <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p>
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                ⚠️ {errors.lastName.message}
+              </p>
             )}
           </div>
         </div>
 
+        {/* Username */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Username
+            Username *
           </label>
           <input
             {...register('username')}
             type="text"
-            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`mt-1 block w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              errors.username
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             placeholder="johndoe"
           />
-          {errors.username && (
-            <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+          {errors.username ? (
+            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              ⚠️ {errors.username.message}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              3-30 characters, letters, numbers, underscores, hyphens
+            </p>
           )}
-          <p className="mt-1 text-xs text-gray-500">Min 3 characters</p>
         </div>
 
+        {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Email
+            Email *
           </label>
           <input
             {...register('email')}
             type="email"
-            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`mt-1 block w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              errors.email
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             placeholder="you@example.com"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              ⚠️ {errors.email.message}
+            </p>
           )}
         </div>
 
+        {/* Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Password
+            Password *
           </label>
           <input
             {...register('password')}
             type="password"
-            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`mt-1 block w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              errors.password
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             placeholder="••••••"
           />
-          {errors.password && (
-            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+          {errors.password ? (
+            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              ⚠️ {errors.password.message}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Min 6 characters, uppercase, lowercase, number
+            </p>
           )}
-          <p className="mt-2 text-xs text-gray-600">Min 6 characters</p>
+
+          {/* Password strength indicator */}
+          {password && !errors.password && (
+            <div className="mt-2 flex gap-1">
+              <div className="flex-1 h-1 bg-green-500 rounded"></div>
+              <div className="flex-1 h-1 bg-green-500 rounded"></div>
+              <div className="flex-1 h-1 bg-green-500 rounded"></div>
+            </div>
+          )}
         </div>
 
+        {/* Confirm Password */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Confirm Password *
+          </label>
+          <input
+            {...register('confirmPassword')}
+            type="password"
+            className={`mt-1 block w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              errors.confirmPassword
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
+            placeholder="••••••"
+          />
+          {errors.confirmPassword && (
+            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              ⚠️ {errors.confirmPassword.message}
+            </p>
+          )}
+        </div>
+
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition"
+          className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition duration-200"
         >
           {isLoading ? 'Creating account...' : 'Sign up'}
         </button>
       </form>
 
+      {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-300" />
@@ -218,6 +249,7 @@ export default function SignupPage() {
         </div>
       </div>
 
+      {/* Sign In Link */}
       <Link
         href="/login"
         className="w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition text-center"
@@ -225,6 +257,7 @@ export default function SignupPage() {
         Sign in
       </Link>
 
+      {/* Terms */}
       <p className="text-xs text-gray-600 text-center">
         By signing up, you agree to our{' '}
         <Link href="#" className="text-blue-600 hover:underline">
