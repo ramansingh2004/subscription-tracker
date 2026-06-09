@@ -6,18 +6,15 @@ import { SubscriptionCard } from '@/components/dashboard/SubscriptionCard';
 import { QuickStats } from '@/components/dashboard/QuickStats';
 import { UpcomingRenewals } from '@/components/dashboard/UpcomingRenewals';
 import { EmptyState } from '@/components/shared/EmptyState';
+import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 
 export default function DashboardContent() {
   const { subscriptions, isLoading } = useSubscriptions();
   const { currency } = useCurrency();
 
-  // Handle loading state with suspense - this shouldn't happen but as fallback
+  // Handle loading state with skeleton loader
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const activeSubscriptions = subscriptions.filter(

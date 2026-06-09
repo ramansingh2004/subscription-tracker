@@ -7,6 +7,7 @@ import { usePrefetch } from '@/lib/hooks/lazy-loading.hook';
 import { useQueryClient } from '@tanstack/react-query';
 import { CurrencyConverter } from '@/lib/currency-service';
 import Link from 'next/link';
+import SubscriptionsSkeleton from '@/components/subscriptions/SubscriptionsSkeleton';
 
 interface Subscription {
   _id: string;
@@ -66,6 +67,10 @@ export default function SubscriptionsContent() {
     sortOrder,
     search: debouncedSearch,
   });
+
+  if (isLoading) {
+    return <SubscriptionsSkeleton />;
+  }
 
   const subscriptions: Subscription[] = data?.data || [];
   const pagination = data?.pagination || {

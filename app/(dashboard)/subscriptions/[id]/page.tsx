@@ -7,6 +7,59 @@ import { SubscriptionForm } from '@/components/subscriptions/SubscriptionForm';
 import toast from 'react-hot-toast';
 import { ISubscription } from '@/typesDefined/index';
 
+function SubscriptionDetailSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="flex justify-between items-start">
+        <div className="space-y-2 flex-grow">
+          <div className="h-9 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-100 rounded w-1/4 mt-2"></div>
+        </div>
+        <div className="h-10 bg-blue-200 rounded w-20"></div>
+      </div>
+
+      {/* Details Grid Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="bg-white p-6 rounded-lg shadow space-y-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              <div className="h-7 bg-gray-100 rounded w-1/2 mt-1"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right Column */}
+        <div className="bg-white p-6 rounded-lg shadow space-y-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-7 bg-gray-100 rounded w-1/2 mt-1"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes Skeleton */}
+      <div className="bg-white p-6 rounded-lg shadow space-y-3">
+        <div className="h-5 bg-gray-200 rounded w-16"></div>
+        <div className="space-y-2 mt-2">
+          <div className="h-4 bg-gray-100 rounded w-full"></div>
+          <div className="h-4 bg-gray-100 rounded w-5/6"></div>
+        </div>
+      </div>
+
+      {/* Action Buttons Skeleton */}
+      <div className="flex justify-end gap-4">
+        <div className="h-10 bg-gray-200 rounded w-20"></div>
+        <div className="h-10 bg-red-200 rounded w-44"></div>
+      </div>
+    </div>
+  );
+}
+
 export default function SubscriptionDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -47,11 +100,7 @@ export default function SubscriptionDetailPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <SubscriptionDetailSkeleton />;
   }
 
   if (!subscription) {

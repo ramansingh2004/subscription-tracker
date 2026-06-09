@@ -5,6 +5,7 @@ import { useState } from 'react';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { EmptyState } from '@/components/shared/EmptyState';
+import NotificationsSkeleton from '@/components/notifications/NotificationsSkeleton';
 
 export default function NotificationsContent() {
   const { notifications, unreadCount, isLoading, markAsRead } = useNotifications();
@@ -37,13 +38,9 @@ export default function NotificationsContent() {
     }
   };
 
-  // Handle loading state with suspense - this shouldn't happen but as fallback
+  // Handle loading state with skeleton loader
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <NotificationsSkeleton />;
   }
 
   return (
