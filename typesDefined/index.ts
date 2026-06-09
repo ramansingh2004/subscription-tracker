@@ -67,6 +67,25 @@ export interface INotification extends Document {
   createdAt: Date;
 }
 
+export interface INotificationQueue extends Document {
+  userId: mongoose.Types.ObjectId;
+  notifications: Array<{
+    type: 'renewal' | 'recommendation' | 'report' | 'share';
+    title: string;
+    message: string;
+    subscriptionId?: mongoose.Types.ObjectId;
+    createdAt: Date;
+  }>;
+  status: 'pending' | 'sent' | 'failed';
+  scheduledFor: Date; // When to send this batch
+  sentAt?: Date;
+  failureReason?: string;
+  emailSent: boolean;
+  inAppCreated: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 //used for other purposes
 export interface ApiResponse<T> {
   success: boolean;
