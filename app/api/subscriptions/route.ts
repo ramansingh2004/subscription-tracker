@@ -5,6 +5,13 @@ import { subscriptionSchema } from '@/lib/validation';
 import { verifyAccessToken } from '@/lib/jwt';
 import { ZodError } from 'zod';
 import { checkAndProcessSubRenewals } from '@/lib/subscription-helper';
+import {
+  getCache,
+  setCache,
+  clearSubscriptionCache,
+  cacheKeys,
+  CACHE_TTL,
+} from '@/lib/redis-cache-utils';
 
 function extractUserId(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -17,7 +24,7 @@ function extractUserId(request: NextRequest) {
   return payload?.userId || null;
 }
 
-//GET ALL SUBSCRIPTIONS WITH PAGINATION
+// GET ALL SUBSCRIPTIONS WITH PAGINATION + REDIS CACHING
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,6 +57,24 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
     const search = searchParams.get('search');
 
+    // ← NEW: Generate cache key
+    const cacheKey = cacheKeys.subscriptionsList(userId, page, limit);
+
+    // ← NEW: Try to get from cache
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      const cached = cachedData as any;
+      return NextResponse.json(
+        {
+          success: true,
+          data: cached.subscriptions,
+          pagination: cached.pagination,
+          _cached: true,
+        },
+        { status: 200 }
+      );
+    }
+
     // Build filter
     const filter: any = { userId };
 
@@ -80,22 +105,34 @@ export async function GET(request: NextRequest) {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .lean(); // Use .lean() for faster queries (read-only)
+      .lean(); // Use .lean() for faster queries
+
+    const paginationData = {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    };
+
+    // ← NEW: Cache the result
+    await setCache(
+      cacheKey,
+      { subscriptions, pagination: paginationData },
+      CACHE_TTL.SUBSCRIPTIONS_LIST
+    );
 
     const response = NextResponse.json(
       {
         success: true,
         data: subscriptions,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasMore: page < totalPages,
-        },
+        pagination: paginationData,
       },
       { status: 200 }
     );
+
+    // ← NEW: Add cache headers
+    response.headers.set('Cache-Control', 'private, max-age=600'); // 10 minutes
 
     return response;
   } catch (error) {
@@ -110,7 +147,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// CREATE NEW SUBSCRIPTION
+// CREATE NEW SUBSCRIPTION + INVALIDATE CACHE
 
 export async function POST(request: NextRequest) {
   try {
@@ -137,7 +174,9 @@ export async function POST(request: NextRequest) {
 
     await subscription.save();
 
-    // Don't cache POST responses - they're creating new data
+    // ← NEW: Invalidate related caches
+    await clearSubscriptionCache(userId);
+
     return NextResponse.json(
       {
         success: true,

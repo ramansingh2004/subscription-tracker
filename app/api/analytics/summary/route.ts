@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import {Subscription} from '@/models/Subscription.model';
+import { Subscription } from '@/models/Subscription.model';
 import { verifyAccessToken } from '@/lib/jwt';
+import {
+  getCache,
+  setCache,
+  cacheKeys,
+  CACHE_TTL,
+} from '@/lib/redis-cache-utils';
 
 // Exchange rates (base: USD) — must match lib/currency-service.ts
 const EXCHANGE_RATES: Record<string, number> = {
@@ -38,10 +44,33 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const userId = payload.userId;
+
+    // ← NEW: Generate cache key
+    const cacheKey = cacheKeys.analyticsSummary(userId);
+
+    // ← NEW: Try to get from cache
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      const response = NextResponse.json(
+        {
+          success: true,
+          data: { summary: cachedData },
+          _cached: true,
+        },
+        { status: 200 }
+      );
+
+      // ← NEW: Add cache headers
+      response.headers.set('Cache-Control', 'private, max-age=3600'); // 1 hour
+
+      return response;
+    }
+
     const subscriptions = await Subscription.find({
-      userId: payload.userId,
+      userId,
       status: 'active',
-    });
+    }).lean(); // Use lean for faster queries
 
     // Calculate monthly cost — normalize every subscription to USD first
     const monthlyCost = subscriptions.reduce((sum, sub) => {
@@ -60,20 +89,32 @@ export async function GET(req: NextRequest) {
       return sum;
     }, 0);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        summary: {
-          totalSubscriptions: subscriptions.length,
-          monthlyCost: Math.round(monthlyCost * 100) / 100,
-          yearlyCost: Math.round(yearlyCost * 100) / 100,
-          averagePerSubscription: subscriptions.length
-            ? Math.round((monthlyCost / subscriptions.length) * 100) / 100
-            : 0,
-        },
+    const summary = {
+      totalSubscriptions: subscriptions.length,
+      monthlyCost: Math.round(monthlyCost * 100) / 100,
+      yearlyCost: Math.round(yearlyCost * 100) / 100,
+      averagePerSubscription: subscriptions.length
+        ? Math.round((monthlyCost / subscriptions.length) * 100) / 100
+        : 0,
+    };
+
+    // ← NEW: Cache the result
+    await setCache(cacheKey, summary, CACHE_TTL.ANALYTICS_SUMMARY);
+
+    const response = NextResponse.json(
+      {
+        success: true,
+        data: { summary },
       },
-    });
+      { status: 200 }
+    );
+
+    // ← NEW: Add cache headers
+    response.headers.set('Cache-Control', 'private, max-age=3600'); // 1 hour
+
+    return response;
   } catch (error: any) {
+    console.error('Analytics summary error:', error);
     return NextResponse.json(
       { success: false, error: { message: error.message } },
       { status: 500 }

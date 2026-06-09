@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # ============ REDIS SERVICE ============
+  redis:
+    image: redis:7-alpine  # Lightweight Redis image
+    container_name: subtrack-redis
+    
+    # Port mapping: container:host
+    ports:
+      - "6379:6379"  # Redis port
+    
+    # Volumes for data persistence
+    volumes:
+      - redis-data:/data
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    # Environment variables
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    
+    # Command to run Redis with optional password
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-}
+    
+    # Always restart if crashes
+    restart: unless-stopped
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============ REDIS COMMANDER (Optional UI) ============
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: subtrack-redis-commander
+    
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    
+    ports:
+      - "8081:8081"  # Web UI at http://localhost:8081
+    
+    depends_on:
+      - redis
+    
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local
