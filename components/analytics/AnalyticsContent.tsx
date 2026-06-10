@@ -10,7 +10,7 @@ import { CategoryBreakdown } from '@/components/analytics/CategoryBreakdown';
 import AnalyticsSkeleton from '@/components/analytics/AnalyticsSkeleton';
 
 export default function AnalyticsContent() {
-  const { currency, format } = useCurrency();
+  const { currency, format, convert } = useCurrency();
 
   const [summary, setSummary] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
@@ -67,9 +67,9 @@ export default function AnalyticsContent() {
   // Convert category data from USD to user's currency
   const convertedCategories = categories.map((cat: any) => ({
     ...cat,
-    totalCost: CurrencyConverter.convert(cat.totalCost, 'USD', currency),
-    cost: CurrencyConverter.convert(cat.cost, 'USD', currency),
-    monthlyEquivalent: CurrencyConverter.convert(cat.monthlyEquivalent, 'USD', currency),
+    totalCost: convert(cat.totalCost, 'USD'),
+    cost: convert(cat.cost, 'USD'),
+    monthlyEquivalent: convert(cat.monthlyEquivalent, 'USD'),
   }));
 
   return (

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
+import { CurrencyProvider } from '@/components/providers/CurrencyProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-blue-50">
         <ReactQueryProvider>
-          {children}
+          <CurrencyProvider>
+            {children}
+          </CurrencyProvider>
           <Toaster
             position="top-right"
             toastOptions={{

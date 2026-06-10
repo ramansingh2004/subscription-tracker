@@ -27,19 +27,22 @@ export class CurrencyConverter {
    * @param amount Amount to convert
    * @param fromCurrency Source currency code (e.g., 'USD')
    * @param toCurrency Target currency code (e.g., 'EUR')
+   * @param customRates Optional custom rates to override static rates
    * @returns Converted amount rounded to 2 decimals
    */
   static convert(
     amount: number,
     fromCurrency: string = 'USD',
-    toCurrency: string = 'USD'
+    toCurrency: string = 'USD',
+    customRates?: Record<string, number>
   ): number {
     if (fromCurrency === toCurrency) {
       return amount;
     }
 
-    const fromRate = EXCHANGE_RATES[fromCurrency] || EXCHANGE_RATES.USD;
-    const toRate = EXCHANGE_RATES[toCurrency] || EXCHANGE_RATES.USD;
+    const rates = customRates || EXCHANGE_RATES;
+    const fromRate = rates[fromCurrency] || rates.USD || 1;
+    const toRate = rates[toCurrency] || rates.USD || 1;
 
     const amountInUSD = amount / fromRate;
     const convertedAmount = amountInUSD * toRate;

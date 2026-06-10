@@ -78,27 +78,31 @@ export function useSubscriptions() {
  * Uses Zustand store for global state management
  */
 export function useCurrency() {
-  // ← Listen to Zustand store for currency changes
+  // ← Listen to Zustand store for currency and exchange rate changes
   const currency = useAuthStore((state) => state.currency);
+  const rates = useAuthStore((state) => state.rates);
   
   return {
     currency,
+    rates,
     format: (amount: number, originalCurrency: string = 'USD') => {
       const converted = CurrencyConverter.convert(
         amount,
         originalCurrency,
-        currency
+        currency,
+        rates
       );
       return CurrencyConverter.format(converted, currency);
     },
     convert: (amount: number, fromCurrency: string = 'USD') => {
-      return CurrencyConverter.convert(amount, fromCurrency, currency);
+      return CurrencyConverter.convert(amount, fromCurrency, currency, rates);
     },
     formatWithOriginal: (amount: number, originalCurrency: string = 'USD') => {
       const converted = CurrencyConverter.convert(
         amount,
         originalCurrency,
-        currency
+        currency,
+        rates
       );
       return {
         converted: CurrencyConverter.format(converted, currency),

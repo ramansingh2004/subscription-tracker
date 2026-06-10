@@ -1,6 +1,7 @@
 import { ISubscription } from '@/typesDefined/index';
 import Link from 'next/link';
 import { CurrencyConverter } from '@/lib/currency-service';
+import { useAuthStore } from '@/store/authStore';
 
 interface Props {
   subscription: ISubscription;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function SubscriptionCard({ subscription, currency }: Props) {
+  const rates = useAuthStore((state) => state.rates);
   const daysUntilRenewal = Math.ceil(
     (new Date(subscription.nextRenewalDate).getTime() - Date.now()) /
       (1000 * 60 * 60 * 24)
@@ -47,7 +49,8 @@ export function SubscriptionCard({ subscription, currency }: Props) {
               CurrencyConverter.convert(
                 subscription.cost,
                 subscription.currency || 'USD',
-                currency || 'USD'
+                currency || 'USD',
+                rates
               ),
               currency || 'USD'
             )}

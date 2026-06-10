@@ -1,5 +1,6 @@
 import { CurrencyConverter } from '@/lib/currency-service';
 import { useUserPreferences } from '@/lib/hooks/user-settings';
+import { useAuthStore } from '@/store/authStore';
 
 interface SubscriptionRowProps {
   subscription: {
@@ -21,12 +22,14 @@ export const SubscriptionRowWithConversion: React.FC<SubscriptionRowProps> = ({
   subscription,
 }) => {
   const { currency: userCurrency } = useUserPreferences();
+  const rates = useAuthStore((state) => state.rates);
 
   // Convert subscription cost to user's preferred currency
   const convertedCost = CurrencyConverter.convert(
     subscription.cost,
     subscription.currency,
-    userCurrency
+    userCurrency,
+    rates
   );
 
   const renewalDate = new Date(subscription.nextRenewalDate);
@@ -80,13 +83,15 @@ export const SubscriptionRowWithConversion: React.FC<SubscriptionRowProps> = ({
  */
 export const usePriceFormatter = () => {
   const { currency } = useUserPreferences();
+  const rates = useAuthStore((state) => state.rates);
 
   return {
     format: (amount: number, originalCurrency: string = 'USD') => {
       const converted = CurrencyConverter.convert(
         amount,
         originalCurrency,
-        currency
+        currency,
+        rates
       );
       return CurrencyConverter.format(converted, currency);
     },
@@ -94,7 +99,8 @@ export const usePriceFormatter = () => {
       const converted = CurrencyConverter.convert(
         amount,
         originalCurrency,
-        currency
+        currency,
+        rates
       );
       return {
         converted: CurrencyConverter.format(converted, currency),

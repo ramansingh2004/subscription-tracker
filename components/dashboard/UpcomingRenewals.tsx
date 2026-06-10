@@ -1,6 +1,7 @@
 import { ISubscription } from '@/typesDefined';
 import Link from 'next/link';
 import { CurrencyConverter } from '@/lib/currency-service';
+import { useAuthStore } from '@/store/authStore';
 
 interface Props {
   subscriptions: ISubscription[];
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function UpcomingRenewals({ subscriptions, currency }: Props) {
+  const rates = useAuthStore((state) => state.rates);
   const today = new Date();
   const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -60,7 +62,7 @@ export function UpcomingRenewals({ subscriptions, currency }: Props) {
               >
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={`/subscriptions/${sub._id}`}
+                     href={`/subscriptions/${sub._id}`}
                     className="block font-medium text-gray-900 hover:text-blue-600 transition truncate"
                   >
                     {sub.name}
@@ -82,7 +84,8 @@ export function UpcomingRenewals({ subscriptions, currency }: Props) {
                     CurrencyConverter.convert(
                       sub.cost,
                       sub.currency || 'USD',
-                      currency || 'USD'
+                      currency || 'USD',
+                      rates
                     ),
                     currency || 'USD'
                   )}

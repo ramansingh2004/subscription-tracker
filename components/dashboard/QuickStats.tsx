@@ -1,5 +1,6 @@
 import { ISubscription } from '@/typesDefined/index';
 import { CurrencyConverter } from '@/lib/currency-service';
+import { useAuthStore } from '@/store/authStore';
 
 interface Props {
   subscriptions: ISubscription[];
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export function QuickStats({ subscriptions, currency }: Props) {
+  const rates = useAuthStore((state) => state.rates);
+
   if (subscriptions.length === 0) {
     return null;
   }
@@ -18,7 +21,8 @@ export function QuickStats({ subscriptions, currency }: Props) {
     const costInPreferredCurrency = CurrencyConverter.convert(
       sub.cost,
       sub.currency || 'USD',
-      currency || 'USD'
+      currency || 'USD',
+      rates
     );
     
     if (sub.billingCycle === 'monthly') {

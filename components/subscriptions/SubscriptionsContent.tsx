@@ -35,7 +35,7 @@ const CATEGORIES = [
 
 export default function SubscriptionsContent() {
   const queryClient = useQueryClient();
-  const { currency, format, formatWithOriginal } = useCurrency();
+  const { currency, format, formatWithOriginal, convert } = useCurrency();
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -148,7 +148,7 @@ export default function SubscriptionsContent() {
         : sub.billingCycle === 'quarterly'
           ? sub.cost / 3
           : sub.cost;
-    const converted = CurrencyConverter.convert(monthlyCost, sub.currency, currency);
+    const converted = convert(monthlyCost, sub.currency);
     return sum + converted;
   }, 0);
 

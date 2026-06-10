@@ -35,7 +35,7 @@ export default function SettingsPage() {
   
   // ← Get Zustand store functions
   const { setCurrency, updateUserWithCurrency } = useAuthStore();
-  const { currency: currentCurrency } = useCurrency(); // ← Get current currency
+  const { currency: currentCurrency, rates } = useCurrency(); // ← Get current currency
 
   const user = settingsData?.data?.user;
 
@@ -113,7 +113,8 @@ export default function SettingsPage() {
   const convertedAmount = CurrencyConverter.convert(
     previewAmount,
     'USD',
-    selectedCurrency
+    selectedCurrency,
+    rates
   );
   const formattedAmount = CurrencyConverter.format(convertedAmount, selectedCurrency);
 
@@ -275,7 +276,7 @@ export default function SettingsPage() {
                       </div>
                       <div className="pt-2 mt-2 border-t border-blue-200">
                         <p className="text-xs text-blue-700">
-                          Exchange rate: 1 USD = {CurrencyConverter.convert(1, 'USD', selectedCurrency)} {selectedCurrency}
+                          Exchange rate: 1 USD = {CurrencyConverter.convert(1, 'USD', selectedCurrency, rates)} {selectedCurrency}
                         </p>
                       </div>
                     </div>

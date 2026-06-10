@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CurrencyConverter } from '@/lib/currency-service';
+import { useAuthStore } from '@/store/authStore';
 
 interface SpendingChartProps {
   currency?: string;
@@ -20,6 +21,7 @@ interface SpendingChartProps {
 export function SpendingChart({ currency = 'USD' }: SpendingChartProps) {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const rates = useAuthStore((state) => state.rates);
 
   useEffect(() => {
     const fetchTrends = async () => {
@@ -30,7 +32,7 @@ export function SpendingChart({ currency = 'USD' }: SpendingChartProps) {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
           const usdCost = Math.random() * 200 + 50; // Simulated USD data
-          const convertedCost = CurrencyConverter.convert(usdCost, 'USD', currency);
+          const convertedCost = CurrencyConverter.convert(usdCost, 'USD', currency, rates);
           months.push({
             month: date.toLocaleDateString('en-US', { month: 'short' }),
             cost: convertedCost,
@@ -45,7 +47,7 @@ export function SpendingChart({ currency = 'USD' }: SpendingChartProps) {
     };
 
     fetchTrends();
-  }, [currency]);
+  }, [currency, rates]);
 
   if (isLoading) {
     return <div className="bg-white p-6 rounded-lg shadow h-80">Loading...</div>;
