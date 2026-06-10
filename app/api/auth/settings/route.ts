@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import {User} from '@/models/User.model';
 import { verifyAccessToken } from '@/lib/jwt';
 import { z } from 'zod';
+import { clearUserCache } from '@/lib/redis-cache-utils';
 
 // Validation schema for settings
 const settingsSchema = z.object({
@@ -108,6 +109,9 @@ export async function PUT(req: NextRequest) {
 
     // Save user
     await user.save();
+
+    // Clear Redis cache for this user
+    await clearUserCache(user._id.toString());
 
     // Return updated user
     return NextResponse.json(

@@ -27,7 +27,6 @@ export default function SettingsPage() {
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
-  const [currencyPreview, setCurrencyPreview] = useState<string>('USD');
   const [previewAmount, setPreviewAmount] = useState<number>(9.99);
 
   const { data: settingsData, isLoading: settingsLoading } = useUserSettings();
@@ -72,7 +71,6 @@ export default function SettingsPage() {
         notificationFrequency: user.preferences?.notificationFrequency || 'daily',
         emailNotifications: user.preferences?.emailNotifications ?? true,
       });
-      setCurrencyPreview(user.preferences?.currency || 'USD');
     }
   }, [user, reset]);
 
@@ -243,9 +241,6 @@ export default function SettingsPage() {
                     </label>
                     <select
                       {...register('currency')}
-                      onChange={(e) => {
-                        setCurrencyPreview(e.target.value);
-                      }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {CurrencyConverter.getSupportedCurrencies().map((curr) => (
