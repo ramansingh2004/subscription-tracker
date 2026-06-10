@@ -67,11 +67,6 @@ export default function SubscriptionsContent() {
     sortOrder,
     search: debouncedSearch,
   });
-
-  if (isLoading) {
-    return <SubscriptionsSkeleton />;
-  }
-
   const subscriptions: Subscription[] = data?.data || [];
   const pagination = data?.pagination || {
     page: 1,
@@ -110,6 +105,10 @@ export default function SubscriptionsContent() {
       });
     }
   });
+
+  if (isLoading) {
+    return <SubscriptionsSkeleton />;
+  }
 
   const handleNextPage = () => {
     if (pagination.hasMore) {
