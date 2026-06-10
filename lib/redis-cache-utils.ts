@@ -132,7 +132,7 @@ export const deletePatternCache = async (pattern: string): Promise<number> => {
     const keys = await redis.keys(pattern);
     if (keys.length === 0) return 0;
 
-    const deleted = await redis.del(keys.toString());
+    const deleted = await redis.del(...keys);
     console.log(`✅ Cache DELETED ${deleted} keys matching: ${pattern}`);
     return deleted;
   } catch (error) {

@@ -53,9 +53,6 @@ export async function GET(request: NextRequest) {
         { status: 200 }
       );
 
-      // ← NEW: Add cache headers
-      response.headers.set('Cache-Control', 'private, max-age=1800'); // 30 minutes
-
       return response;
     }
 
@@ -83,9 +80,6 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-
-    // ← NEW: Add cache headers
-    response.headers.set('Cache-Control', 'private, max-age=1800'); // 30 minutes
 
     return response;
   } catch (error) {

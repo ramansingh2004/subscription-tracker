@@ -131,9 +131,6 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
 
-    // ← NEW: Add cache headers
-    response.headers.set('Cache-Control', 'private, max-age=600'); // 10 minutes
-
     return response;
   } catch (error) {
     console.error('Get subscriptions error:', error);
