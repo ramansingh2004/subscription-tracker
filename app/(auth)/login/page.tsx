@@ -305,7 +305,7 @@ export default function LoginPage() {
 
         {/* Footnote */}
         <div className="mt-8 text-center text-sm text-stone-500">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link
             href="/signup"
             className="text-[#606C38] hover:text-[#283618] font-bold hover:underline transition"
