@@ -215,9 +215,13 @@ function showSuccess(message) {
 
 function openDashboard() {
   chrome.tabs.create({
-    url: 'https://app.subtrack.app/dashboard',
+    url: 'https://subscription-tracker-five-puce.vercel.app/dashboard',
   });
 }
 
 // Refresh stats periodically
 setInterval(loadStats, 10000);
+
+document
+  .getElementById('dashboardButton')
+  .addEventListener('click', openDashboard);
