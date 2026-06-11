@@ -87,6 +87,9 @@ export default function SettingsPage() {
       if (result?.data?.user) {
         console.log('Updating Zustand with user:', result.data.user);
         updateUserWithCurrency(result.data.user);
+        
+        // ← Also update localStorage so it stays in sync across page reloads
+        localStorage.setItem('user', JSON.stringify(result.data.user));
       }
 
       // ← Also explicitly set currency
