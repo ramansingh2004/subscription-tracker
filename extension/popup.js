@@ -79,7 +79,7 @@ async function handleLogin() {
     loginButton.disabled = true;
     loginButton.innerHTML = '<span class="spinner"></span>';
 
-    const response = await fetch('https://api.subtrack.app/api/auth/login', {
+    const response = await fetch('https://subscription-tracker-five-puce.vercel.app/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
