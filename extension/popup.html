@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubTrack</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 400px;
+      background: #f9fafb;
+      color: #333;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .logo {
+      font-size: 24px;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    .status-badge.active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-badge.inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+
+    .stat:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #6b7280;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .button-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .button-primary:hover {
+      background: #2563eb;
+    }
+
+    .button-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .button-danger:hover {
+      background: #dc2626;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+    }
+
+    .toggle-switch {
+      width: 40px;
+      height: 24px;
+      background: #d1d5db;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .toggle-switch.active {
+      background: #10b981;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 10px;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s ease;
+    }
+
+    .toggle-switch.active::after {
+      left: 18px;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input {
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .footer {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #f3f4f6;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login View -->
+    <div id="loginView">
+      <div class="section">
+        <div class="header">
+          <span class="logo">💰</span>
+          <div>
+            <div class="title">SubTrack</div>
+            <div class="status-badge inactive">Not Connected</div>
+          </div>
+        </div>
+
+        <div id="loginMessage" class="error hidden"></div>
+
+        <div class="login-form">
+          <input
+            id="emailInput"
+            type="email"
+            class="input"
+            placeholder="Email"
+            autocomplete="email"
+          />
+          <input
+            id="passwordInput"
+            type="password"
+            class="input"
+            placeholder="Password"
+            autocomplete="current-password"
+          />
+
+          <button id="loginButton" class="button button-primary">
+            Sign In
+          </button>
+
+          <div class="footer">
+            No account?
+            <a
+              href="https://app.subtrack.com/signup"
+              target="_blank"
+              style="color: #3b82f6; text-decoration: none"
+            >
+              Create one
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main View -->
+    <div id="mainView" class="hidden">
+      <div class="section">
+        <div class="header">
+          <span class="logo">💰</span>
+          <div>
+            <div class="title">SubTrack</div>
+            <div id="statusBadge" class="status-badge active">Connected</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Section -->
+      <div class="section">
+        <div class="section-title">📊 Today's Activity</div>
+        <div class="stat">
+          <span class="stat-label">Pages Visited</span>
+          <span id="pagesVisited" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Time on Subscriptions</span>
+          <span id="timeOnSubs" class="stat-value">0 min</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Ads Detected</span>
+          <span id="adsDetected" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Paywalls Found</span>
+          <span id="paywallsFound" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <!-- Tracking Control -->
+      <div class="section">
+        <div class="section-title">⚙️ Tracking</div>
+        <div class="toggle">
+          <span>Enable Tracking</span>
+          <div id="trackingToggle" class="toggle-switch active"></div>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="section">
+        <button
+          id="dashboardButton"
+          class="button button-primary"
+          onclick="openDashboard()"
+        >
+          📊 Open Dashboard
+        </button>
+        <button id="logoutButton" class="button button-danger">
+          Logout
+        </button>
+      </div>
+
+      <div class="footer">
+        <a
+          href="https://app.subtrack.com"
+          target="_blank"
+          style="color: #3b82f6; text-decoration: none"
+        >
+          Visit SubTrack App
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
