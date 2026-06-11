@@ -1,6 +1,6 @@
 // background.js - Service Worker for Chrome Extension
 
-const API_BASE_URL = 'https://api.subtrack.app'; // Change to your domain
+const API_BASE_URL = 'https://subscription-tracker-five-puce.vercel.app'; // Change to your domain
 const TRACKING_INTERVAL = 5000; // Send data every 5 seconds
 const BATCH_SIZE = 50; // Send up to 50 events per request
 

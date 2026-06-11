@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubTrack Extension - Setup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: #1f2937;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    .features {
+      text-align: left;
+      margin-bottom: 30px;
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .feature:last-child {
+      margin-bottom: 0;
+    }
+
+    .feature-icon {
+      font-size: 20px;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input {
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .button {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .button-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .button-secondary {
+      background: #e5e7eb;
+      color: #1f2937;
+    }
+
+    .button-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .divider {
+      text-align: center;
+      color: #9ca3af;
+      margin: 20px 0;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      display: inline-block;
+      width: 40%;
+      height: 1px;
+      background: #d1d5db;
+      vertical-align: middle;
+    }
+
+    .divider::before {
+      margin-right: 10px;
+    }
+
+    .divider::after {
+      margin-left: 10px;
+    }
+
+    .link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login View -->
+    <div id="loginView">
+      <div class="logo">💰</div>
+      <h1>SubTrack Extension</h1>
+      <p class="subtitle">Track subscriptions across the web</p>
+
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">🌐</span>
+          <span>Track websites you visit</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">⏱️</span>
+          <span>Monitor time spent per site</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📢</span>
+          <span>Detect ads and paywalls</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">💡</span>
+          <span>Find subscription opportunities</span>
+        </div>
+      </div>
+
+      <div id="errorMessage" class="message error hidden"></div>
+
+      <div class="form">
+        <input
+          id="emailInput"
+          type="email"
+          class="input"
+          placeholder="Email"
+          autocomplete="email"
+        />
+        <input
+          id="passwordInput"
+          type="password"
+          class="input"
+          placeholder="Password"
+          autocomplete="current-password"
+        />
+
+        <button id="loginButton" class="button button-primary">
+          Continue with SubTrack
+        </button>
+      </div>
+
+      <div class="divider">or</div>
+
+      <button
+        id="signupButton"
+        class="button button-secondary"
+        style="width: 100%"
+      >
+        Create New Account
+      </button>
+
+      <p style="margin-top: 20px; font-size: 12px; color: #6b7280">
+        By using this extension, you agree to our
+        <a href="https://subtrack.com/privacy" class="link">Privacy Policy</a>
+      </p>
+    </div>
+
+    <!-- Success View -->
+    <div id="successView" class="hidden">
+      <div class="logo">✅</div>
+      <h1>All Set!</h1>
+      <p class="subtitle">Your extension is ready to track</p>
+
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">👀</span>
+          <span>The extension will start tracking automatically</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🔐</span>
+          <span>Your data is encrypted and private</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📊</span>
+          <span>View insights in your SubTrack dashboard</span>
+        </div>
+      </div>
+
+      <button
+        id="goToDashboardButton"
+        class="button button-primary"
+        style="width: 100%"
+      >
+        Go to Dashboard
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ============ INITIALIZATION ============
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      setupEventListeners();
+      await checkAuthStatus();
+    });
+
+    async function checkAuthStatus() {
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'GET_AUTH' });
+        if (response.token && response.userId) {
+          showSuccessView();
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    }
+
+    // ============ EVENT LISTENERS ============
+
+    function setupEventListeners() {
+      document.getElementById('loginButton').addEventListener('click', handleLogin);
+      document.getElementById('signupButton').addEventListener('click', handleSignup);
+      document
+        .getElementById('goToDashboardButton')
+        .addEventListener('click', goToDashboard);
+
+      document.getElementById('emailInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+
+      document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+    }
+
+    // ============ LOGIN ============
+
+    async function handleLogin() {
+      try {
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+
+        if (!email || !password) {
+          showError('Please enter email and password');
+          return;
+        }
+
+        const button = document.getElementById('loginButton');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner"></span>';
+
+        const response = await fetch('https://api.subtrack.app/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Login failed. Please check your credentials.');
+        }
+
+        const data = await response.json();
+        const { accessToken, user } = data.data;
+
+        // Send auth to background script
+        await chrome.runtime.sendMessage({
+          type: 'SET_AUTH',
+          token: accessToken,
+          userId: user._id,
+        });
+
+        showSuccessView();
+      } catch (error) {
+        showError(error.message || 'Login failed');
+      } finally {
+        const button = document.getElementById('loginButton');
+        button.disabled = false;
+        button.textContent = 'Continue with SubTrack';
+      }
+    }
+
+    function handleSignup() {
+      window.open('https://app.subtrack.com/signup', '_blank');
+    }
+
+    function goToDashboard() {
+      window.open('https://app.subtrack.com/extension', '_blank');
+      window.close();
+    }
+
+    // ============ VIEW MANAGEMENT ============
+
+    function showSuccessView() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('successView').classList.remove('hidden');
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+
+      setTimeout(() => {
+        errorEl.classList.add('hidden');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
