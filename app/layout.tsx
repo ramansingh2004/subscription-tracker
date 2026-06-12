@@ -1,12 +1,24 @@
-import type { Metadata } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
 import { CurrencyProvider } from '@/components/providers/CurrencyProvider';
 import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'SubTrack - Subscription Manager',
-  description: 'Track and manage all your subscriptions in one place',
+export const metadata = {
+  title: "SubTrack - Stop Wasting Money on Subscriptions",
+  description: "SubTrack automatically detects subscriptions, tracks spending, and helps you save $500+ annually on unwanted services.",
+  keywords: "subscription tracker, subscription management, save money",
+  openGraph: {
+    title: "SubTrack",
+    description: "Track every subscription and save money",
+    image: "/og-image.png",
+    url: "https://subscription-tracker-five-puce.vercel.app",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SubTrack",
+    description: "Stop wasting money on forgotten subscriptions",
+    image: "/twitter-image.png",
+  }
 };
 
 export default function RootLayout({
