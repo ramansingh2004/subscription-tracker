@@ -55,6 +55,7 @@
         /view the rest/i,
       ];
 
+      if (!document.body) return;
       const bodyText = document.body.innerText.toLowerCase();
       const hasPaywallText = paywallPatterns.some((pattern) =>
         pattern.test(bodyText)
@@ -103,6 +104,7 @@
         'payment method',
       ];
 
+      if (!document.body) return;
       const bodyText = document.body.innerText.toLowerCase();
       const found = [];
 
@@ -152,7 +154,7 @@
     }, 2000)
   );
 
-  observer.observe(document.body, {
+  observer.observe(document.documentElement || document, {
     childList: true,
     subtree: true,
   });

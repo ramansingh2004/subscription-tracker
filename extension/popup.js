@@ -13,10 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAuthStatus() {
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'GET_AUTH' });
+    const stored = await chrome.storage.local.get(['authToken', 'userId']);
 
-    if (response.token && response.userId) {
-      currentUser = response.userId;
+    if (stored.authToken && stored.userId) {
+      currentUser = stored.userId;
       showMainView();
       loadStats();
     } else {

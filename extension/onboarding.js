@@ -7,8 +7,8 @@
 
     async function checkAuthStatus() {
       try {
-        const response = await chrome.runtime.sendMessage({ type: 'GET_AUTH' });
-        if (response.token && response.userId) {
+        const stored = await chrome.storage.local.get(['authToken', 'userId']);
+        if (stored.authToken && stored.userId) {
           showSuccessView();
         }
       } catch (error) {

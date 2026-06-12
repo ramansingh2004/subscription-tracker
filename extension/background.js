@@ -11,11 +11,19 @@ let authToken = null;
 let userId = null;
 let extensionEnabled = true;
 
+let initPromise = null;
+function ensureInitialized() {
+  if (!initPromise) {
+    initPromise = initializeExtension();
+  }
+  return initPromise;
+}
+
 // ============ INITIALIZATION ============
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('SubTrack Extension installed');
-  initializeExtension();
+  ensureInitialized();
   openOnboardingPage();
 });
 
@@ -40,6 +48,7 @@ async function initializeExtension() {
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
+    await ensureInitialized();
     if (!extensionEnabled || !authToken) return;
 
     if (currentActiveTab) {
@@ -60,8 +69,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   try {
+    await ensureInitialized();
     if (!extensionEnabled || !authToken) return;
 
     if (changeInfo.status === 'complete' && tab.url) {
@@ -72,8 +82,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
   try {
+    await ensureInitialized();
     if (currentActiveTab === tabId) {
       currentActiveTab = null;
     }
@@ -119,7 +130,7 @@ function trackPageVisit(tab) {
   }
 }
 
-function savePageData(tabId, tab) {
+function savePageData(tabId) {
   try {
     const pageData = pageHistory.get(String(tabId));
     if (!pageData) return;
@@ -151,32 +162,35 @@ function savePageData(tabId, tab) {
 // ============ MESSAGE HANDLING ============
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  try {
-    if (request.type === 'AD_DETECTED') {
-      trackAdDetected(sender.tab);
-      sendResponse({ success: true });
-    } else if (request.type === 'PAYWALL_DETECTED') {
-      trackPaywallDetected(sender.tab);
-      sendResponse({ success: true });
-    } else if (request.type === 'SUBSCRIPTION_MENTION') {
-      trackSubscriptionMention(sender.tab, request.data);
-      sendResponse({ success: true });
-    } else if (request.type === 'SET_AUTH') {
-      setAuthentication(request.token, request.userId);
-      sendResponse({ success: true });
-    } else if (request.type === 'GET_AUTH') {
-      sendResponse({ token: authToken, userId });
-    } else if (request.type === 'ENABLE_TRACKING') {
-      enableTracking();
-      sendResponse({ success: true });
-    } else if (request.type === 'DISABLE_TRACKING') {
-      disableTracking();
-      sendResponse({ success: true });
+  ensureInitialized().then(() => {
+    try {
+      if (request.type === 'AD_DETECTED') {
+        trackAdDetected(sender.tab);
+        sendResponse({ success: true });
+      } else if (request.type === 'PAYWALL_DETECTED') {
+        trackPaywallDetected(sender.tab);
+        sendResponse({ success: true });
+      } else if (request.type === 'SUBSCRIPTION_MENTION') {
+        trackSubscriptionMention(sender.tab, request.data);
+        sendResponse({ success: true });
+      } else if (request.type === 'SET_AUTH') {
+        setAuthentication(request.token, request.userId);
+        sendResponse({ success: true });
+      } else if (request.type === 'GET_AUTH') {
+        sendResponse({ token: authToken, userId });
+      } else if (request.type === 'ENABLE_TRACKING') {
+        enableTracking();
+        sendResponse({ success: true });
+      } else if (request.type === 'DISABLE_TRACKING') {
+        disableTracking();
+        sendResponse({ success: true });
+      }
+    } catch (error) {
+      console.error('Message handling error:', error);
+      sendResponse({ error: error.message });
     }
-  } catch (error) {
-    console.error('Message handling error:', error);
-    sendResponse({ error: error.message });
-  }
+  });
+  return true; // Keep the message channel open for the async response
 });
 
 function trackAdDetected(tab) {
@@ -356,4 +370,4 @@ function openOnboardingPage() {
   }
 }
 
-initializeExtension();
+ensureInitialized();
