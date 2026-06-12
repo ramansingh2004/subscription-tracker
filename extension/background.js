@@ -274,9 +274,13 @@ function trackSubscriptionMention(tab, data) {
 
 // ============ BATCH SENDING ============
 
+let trackingInterval = null;
 function startTracking() {
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+  }
   console.log('Tracking started');
-  setInterval(sendBatchedEvents, TRACKING_INTERVAL);
+  trackingInterval = setInterval(sendBatchedEvents, TRACKING_INTERVAL);
 }
 
 async function sendBatchedEvents() {

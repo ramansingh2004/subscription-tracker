@@ -94,6 +94,13 @@ async function handleLogin() {
     const data = await response.json();
     const { accessToken, user } = data.data;
 
+    // Save auth locally
+    await chrome.storage.local.set({
+      authToken: accessToken,
+      userId: user._id,
+      enabled: true
+    });
+
     // Send auth to background script
     await chrome.runtime.sendMessage({
       type: 'SET_AUTH',
