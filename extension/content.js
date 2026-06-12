@@ -154,10 +154,17 @@
     }, 2000)
   );
 
-  observer.observe(document.documentElement || document, {
-    childList: true,
-    subtree: true,
-  });
+  try {
+    const targetNode = document.documentElement || document.body || document;
+    if (targetNode) {
+      observer.observe(targetNode, {
+        childList: true,
+        subtree: true,
+      });
+    }
+  } catch (error) {
+    console.log('SubTrack: MutationObserver initialization error:', error);
+  }
 
   // ============ HELPERS ============
 
