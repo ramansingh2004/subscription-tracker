@@ -11,6 +11,7 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      allowDangerousEmailAccountLinking: true,
     }),
     
     // Manual Email/Password Provider
@@ -25,35 +26,40 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
-        await mongoose.connect(process.env.MONGODB_URI || '');
-        
-        const user = await User.findOne({ email: credentials.email });
+        try {
+          await mongoose.connect(process.env.MONGODB_URI || '');
+          
+          const user = await User.findOne({ email: credentials.email });
 
-        if (!user || !user.passwordHash) {
-          throw new Error('No user found with this email');
+          if (!user || !user.passwordHash) {
+            throw new Error('No user found with this email');
+          }
+
+          const passwordMatch = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+
+          if (!passwordMatch) {
+            throw new Error('Incorrect password');
+          }
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.firstName || user.username || 'User',
+            image: user.googleImage,
+          };
+        } catch (error) {
+          throw new Error('Authentication failed');
         }
-
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!passwordMatch) {
-          throw new Error('Incorrect password');
-        }
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.firstName || user.username,
-          image: user.googleImage,
-        };
       },
     }),
   ],
   
   callbacks: {
     async signIn({ user, account, profile }) {
+      // Handle Google OAuth sign in
       if (account?.provider === 'google' && profile) {
         try {
           await mongoose.connect(process.env.MONGODB_URI || '');
@@ -61,20 +67,40 @@ export const authOptions: NextAuthOptions = {
           let dbUser = await User.findOne({ googleId: profile.sub });
 
           if (!dbUser) {
-            // Create new user from Google
-            dbUser = await User.create({
-              email: profile.email,
-              googleId: profile.sub,
-              googleEmail: profile.email,
-              googleName: profile.name,
-              googleImage: profile.image,
-              firstName: profile.given_name,
-              lastName: profile.family_name,
-              emailVerified: profile.email_verified || false,
-              oauthProvider: 'google',
-            });
+            // Check if user with this email already exists
+            const existingUser = await User.findOne({ email: profile.email });
+            
+            if (existingUser) {
+              // Link Google to existing account
+              dbUser = await User.findByIdAndUpdate(
+                existingUser._id,
+                {
+                  googleId: profile.sub,
+                  googleEmail: profile.email,
+                  googleName: profile.name,
+                  googleImage: profile.image,
+                  emailVerified: profile.email_verified || existingUser.emailVerified,
+                  oauthProvider: 'google',
+                },
+                { new: true }
+              );
+            } else {
+              // Create new user from Google
+              const names = profile.name?.split(' ') || [''];
+              dbUser = await User.create({
+                email: profile.email,
+                googleId: profile.sub,
+                googleEmail: profile.email,
+                googleName: profile.name,
+                googleImage: profile.image,
+                firstName: names[0] || undefined,
+                lastName: names.slice(1).join(' ') || undefined,
+                emailVerified: profile.email_verified || false,
+                oauthProvider: 'google',
+              });
+            }
           } else {
-            // Update existing user
+            // Update existing Google user
             await User.findByIdAndUpdate(dbUser._id, {
               googleEmail: profile.email,
               googleName: profile.name,

@@ -1,119 +1,119 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User.model';
-import { generateTokens } from '@/lib/jwt';
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import axios from 'axios';
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-
-    const { credential } = await request.json();
+    const { credential } = await req.json();
 
     if (!credential) {
       return NextResponse.json(
-        {
-          success: false,
-          error: { message: 'Google credential is required' },
-        },
+        { message: 'Missing credential' },
         { status: 400 }
       );
     }
 
-    // Exchange the access token for user profile info from Google
-    const googleRes = await fetch(
-      'https://www.googleapis.com/oauth2/v3/userinfo',
-      { headers: { Authorization: `Bearer ${credential}` } }
+    // Verify Google token and get user info
+    const googleData = await axios.get(
+      `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${credential}`
     );
 
-    if (!googleRes.ok) {
+    const {
+      email,
+      name,
+      picture,
+      id: googleId,
+      verified_email,
+    } = googleData.data;
+
+    if (!email) {
       return NextResponse.json(
-        {
-          success: false,
-          error: { message: 'Invalid Google credential' },
-        },
-        { status: 401 }
+        { message: 'Email not provided by Google' },
+        { status: 400 }
       );
     }
 
-    const googleProfile = await googleRes.json();
+    await mongoose.connect(process.env.MONGODB_URI || '');
 
-    // Check if user already exists by googleId or email
-    let user = await User.findOne({
-      $or: [
-        { googleId: googleProfile.sub },
-        { email: googleProfile.email },
-      ],
-    });
+    let user = await User.findOne({ email });
 
     if (user) {
-      // Update existing user with latest Google info
-      user.googleId = googleProfile.sub;
-      user.googleEmail = googleProfile.email;
-      user.googleName = googleProfile.name;
-      user.googleImage = googleProfile.picture;
-      user.emailVerified = googleProfile.email_verified || user.emailVerified;
-      await user.save();
+      // User already exists with this email
+      // Update with Google info if not already linked
+      if (!user.googleId) {
+        user = await User.findByIdAndUpdate(
+          user._id,
+          {
+            googleId,
+            googleEmail: email,
+            googleName: name,
+            googleImage: picture,
+            emailVerified: verified_email || user.emailVerified,
+            oauthProvider: 'google',
+          },
+          { new: true }
+        );
+      }
     } else {
-      // Create a new user from Google profile
-      // Generate a unique username from the email prefix
-      const baseUsername = googleProfile.email.split('@')[0];
-      const uniqueUsername = `${baseUsername}_${Date.now().toString(36)}`;
-
+      // Create new user from Google
+      const names = name?.split(' ') || [''];
       user = await User.create({
-        email: googleProfile.email,
-        username: uniqueUsername,
-        passwordHash: `google_oauth_${Date.now()}`, // Placeholder — user won't login with password
-        googleId: googleProfile.sub,
-        googleEmail: googleProfile.email,
-        googleName: googleProfile.name,
-        googleImage: googleProfile.picture,
-        firstName: googleProfile.given_name,
-        lastName: googleProfile.family_name,
-        emailVerified: googleProfile.email_verified || false,
+        email,
+        googleId,
+        googleEmail: email,
+        googleName: name,
+        googleImage: picture,
+        firstName: names[0] || undefined,
+        lastName: names.slice(1).join(' ') || undefined,
+        emailVerified: verified_email || false,
         oauthProvider: 'google',
       });
     }
 
-    // Generate JWT tokens (same as login/register endpoints)
-    const { accessToken, refreshToken } = generateTokens(user);
+    // Generate JWT
+    const accessToken = jwt.sign(
+      { 
+        userId: user._id, 
+        email: user.email,
+        provider: 'google',
+      },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '7d' }
+    );
 
-    const response = NextResponse.json(
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_REFRESH_SECRET || 'refresh-secret',
+      { expiresIn: '30d' }
+    );
+
+    return NextResponse.json(
       {
-        success: true,
         data: {
+          accessToken,
+          refreshToken,
           user: {
             id: user._id,
             email: user.email,
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            googleImage: user.googleImage,
+            name: user.firstName || user.googleName || 'User',
+            image: user.googleImage,
+            provider: 'google',
           },
-          accessToken,
         },
       },
       { status: 200 }
     );
-
-    // Set refresh token in httpOnly cookie
-    response.cookies.set({
-      name: 'refreshToken',
-      value: refreshToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Google signup error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: { message: 'Internal server error' },
+      { 
+        message: error.message || 'Google signup failed',
+        error: error.message,
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }

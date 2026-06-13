@@ -30,11 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-blue-50">
+        <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ''}>
         <ReactQueryProvider>
           <CurrencyProvider>
-            <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ''}>
               {children}
-            </GoogleOAuthProvider>
           </CurrencyProvider>
           <Toaster
             position="top-right"
@@ -65,6 +64,7 @@ export default function RootLayout({
             }}
           />
         </ReactQueryProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

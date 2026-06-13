@@ -10,7 +10,7 @@ export default function RootPage() {
     if (token && storedUser) {
       window.location.replace('/dashboard');
     } else {
-      window.location.replace('/login');
+      window.location.replace('/landing');
     }
   }, []);
 

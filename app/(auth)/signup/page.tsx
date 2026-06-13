@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { signupSchema, type SignupInput } from '@/lib/validation';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
-import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 
 interface ApiError {
   response?: {
@@ -24,14 +24,6 @@ interface ApiError {
 }
 
 export default function SignupPage() {
-  return (
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
-      <SignupPageContent />
-    </GoogleOAuthProvider>
-  );
-}
-
-function SignupPageContent() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +61,7 @@ function SignupPageContent() {
 
         toast.success('Account created with Google!');
         await new Promise(resolve => setTimeout(resolve, 300));
-        await router.push('/dashboard');
+        router.push('/dashboard');
       } catch (error: unknown) {
         const err = error as ApiError;
         const errorMessage =
@@ -301,8 +293,8 @@ function SignupPageContent() {
                       {...register('firstName')}
                       type="text"
                       className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.firstName
-                          ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                          : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                         }`}
                       placeholder="John"
                     />
@@ -328,8 +320,8 @@ function SignupPageContent() {
                       {...register('lastName')}
                       type="text"
                       className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.lastName
-                          ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                          : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                         }`}
                       placeholder="Doe"
                     />
@@ -357,8 +349,8 @@ function SignupPageContent() {
                     {...register('username')}
                     type="text"
                     className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.username
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                      : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                       }`}
                     placeholder="johndoe"
                   />
@@ -389,8 +381,8 @@ function SignupPageContent() {
                     {...register('email')}
                     type="email"
                     className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.email
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                      : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                       }`}
                     placeholder="you@example.com"
                   />
@@ -417,8 +409,8 @@ function SignupPageContent() {
                     {...register('password')}
                     type={showPassword ? 'text' : 'password'}
                     className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.password
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                      : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                       }`}
                     placeholder="••••••"
                   />
@@ -495,8 +487,8 @@ function SignupPageContent() {
                     {...register('confirmPassword')}
                     type={showConfirmPassword ? 'text' : 'password'}
                     className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.confirmPassword
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                        : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                      : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
                       }`}
                     placeholder="••••••"
                   />
