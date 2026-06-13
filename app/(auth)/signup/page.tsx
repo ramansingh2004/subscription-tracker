@@ -102,7 +102,7 @@ function SignupPageContent() {
     setIsLoading(true);
 
     try {
-      const { confirmPassword: _confirmPassword, ...submitData } = data;
+      const { ...submitData } = data;
 
       const res = await apiClient.post('/auth/register', submitData);
       const { accessToken, refreshToken, user } = res.data.data;
@@ -139,7 +139,7 @@ function SignupPageContent() {
 
   return (
     <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-stone-200/50 flex flex-col md:flex-row min-h-[620px] transition-all duration-300">
-      
+
       {/* Left Pane - Marketing/Branding */}
       <div className="md:w-5/12 bg-gradient-to-b from-[#283618] to-[#606C38] p-10 text-[#FEFAE0] flex-col justify-between hidden md:flex relative overflow-hidden">
         {/* Floating background decorative shapes */}
@@ -211,7 +211,7 @@ function SignupPageContent() {
 
       {/* Right Pane - Form Panel */}
       <div className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-white overflow-y-auto max-h-screen md:max-h-none">
-        
+
         {/* Mobile Header */}
         <div className="md:hidden text-center mb-6">
           <div className="inline-flex items-center gap-2 text-3xl font-extrabold text-[#283618] mb-1">
@@ -247,10 +247,10 @@ function SignupPageContent() {
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
                 Sign up with Google
               </>
@@ -300,11 +300,10 @@ function SignupPageContent() {
                     <input
                       {...register('firstName')}
                       type="text"
-                      className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                        errors.firstName
+                      className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.firstName
                           ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                           : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                      }`}
+                        }`}
                       placeholder="John"
                     />
                   </div>
@@ -328,11 +327,10 @@ function SignupPageContent() {
                     <input
                       {...register('lastName')}
                       type="text"
-                      className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                        errors.lastName
+                      className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.lastName
                           ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                           : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                      }`}
+                        }`}
                       placeholder="Doe"
                     />
                   </div>
@@ -358,11 +356,10 @@ function SignupPageContent() {
                   <input
                     {...register('username')}
                     type="text"
-                    className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                      errors.username
+                    className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.username
                         ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                         : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                    }`}
+                      }`}
                     placeholder="johndoe"
                   />
                 </div>
@@ -391,11 +388,10 @@ function SignupPageContent() {
                   <input
                     {...register('email')}
                     type="email"
-                    className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                      errors.email
+                    className={`block w-full pl-11 pr-4 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.email
                         ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                         : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                    }`}
+                      }`}
                     placeholder="you@example.com"
                   />
                 </div>
@@ -420,11 +416,10 @@ function SignupPageContent() {
                   <input
                     {...register('password')}
                     type={showPassword ? 'text' : 'password'}
-                    className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                      errors.password
+                    className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.password
                         ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                         : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                    }`}
+                      }`}
                     placeholder="••••••"
                   />
                   <button
@@ -476,9 +471,9 @@ function SignupPageContent() {
                     <div className="flex justify-between items-center text-[10px] text-stone-500">
                       <span>Strength: {
                         getPasswordStrength() === 0 ? 'Empty' :
-                        getPasswordStrength() === 1 ? 'Weak' :
-                        getPasswordStrength() === 2 ? 'Fair' :
-                        getPasswordStrength() === 3 ? 'Good' : 'Strong!'
+                          getPasswordStrength() === 1 ? 'Weak' :
+                            getPasswordStrength() === 2 ? 'Fair' :
+                              getPasswordStrength() === 3 ? 'Good' : 'Strong!'
                       }</span>
                     </div>
                   </div>
@@ -499,11 +494,10 @@ function SignupPageContent() {
                   <input
                     {...register('confirmPassword')}
                     type={showConfirmPassword ? 'text' : 'password'}
-                    className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${
-                      errors.confirmPassword
+                    className={`block w-full pl-11 pr-11 py-2.5 border text-sm rounded-xl bg-stone-50/50 transition-all duration-200 outline-none focus:bg-white focus:ring-4 ${errors.confirmPassword
                         ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                         : 'border-stone-200 focus:border-[#606C38] focus:ring-[#606C38]/10'
-                    }`}
+                      }`}
                     placeholder="••••••"
                   />
                   <button
