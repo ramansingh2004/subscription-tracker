@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { signupSchema, type SignupInput } from '@/lib/validation';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 interface ApiError {
   response?: {
@@ -24,6 +24,14 @@ interface ApiError {
 }
 
 export default function SignupPage() {
+  return (
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+      <SignupPageContent />
+    </GoogleOAuthProvider>
+  );
+}
+
+function SignupPageContent() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,10 +70,11 @@ export default function SignupPage() {
         toast.success('Account created with Google!');
         await new Promise(resolve => setTimeout(resolve, 300));
         await router.push('/dashboard');
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as ApiError;
         const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
+          err.response?.data?.message ||
+          err.message ||
           'Google signup failed';
         toast.error(errorMessage);
       } finally {
