@@ -1,4 +1,5 @@
 import { Toaster } from 'react-hot-toast';
+import {GoogleOAuthProvider} from "@react-oauth/google";
 import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
 import { CurrencyProvider } from '@/components/providers/CurrencyProvider';
 import './globals.css';
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body className="bg-blue-50">
         <ReactQueryProvider>
           <CurrencyProvider>
-            {children}
+            <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ''}>
+              {children}
+            </GoogleOAuthProvider>
           </CurrencyProvider>
           <Toaster
             position="top-right"
