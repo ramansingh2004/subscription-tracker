@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-blue-50">
-        <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ''}>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
         <ReactQueryProvider>
           <CurrencyProvider>
               {children}
