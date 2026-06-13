@@ -1,39 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Check, Home, TrendingUp, AlertCircle, Zap, Eye, Lock, BarChart3, Users, Star, Shield } from 'lucide-react';
 
 export default function RootPage() {
-  const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('user');
 
     if (token && storedUser) {
-      router.replace('/dashboard');
-    } else {
       const timer = setTimeout(() => {
-        setCheckingAuth(false);
+        setIsLoggedIn(true);
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [router]);
-
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="text-center">
-          <div className="text-5xl animate-bounce mb-4">💰</div>
-          <h1 className="text-3xl font-extrabold text-[#283618] mb-2 tracking-tight">SubTrack</h1>
-          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-[#606C38] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-        </div>
-      </div>
-    );
-  }
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -51,12 +35,20 @@ export default function RootPage() {
             <a href="#testimonials" className="text-sm font-medium text-stone-600 hover:text-[#283618] transition">Stats</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-semibold text-stone-600 hover:text-[#283618] transition">
-              Log In
-            </Link>
-            <Link href="/signup" className="px-5 py-2 bg-[#283618] hover:bg-[#1b2610] text-[#FEFAE0] rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-              Get Started
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard" className="px-5 py-2 bg-[#283618] hover:bg-[#1b2610] text-[#FEFAE0] rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200">
+                Go to Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-semibold text-stone-600 hover:text-[#283618] transition">
+                  Log In
+                </Link>
+                <Link href="/signup" className="px-5 py-2 bg-[#283618] hover:bg-[#1b2610] text-[#FEFAE0] rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200">
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
