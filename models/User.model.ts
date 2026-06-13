@@ -30,6 +30,16 @@ const userSchema = new Schema<IUser>(
     emailVerificationToken: String,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    // Google OAuth fields
+    googleId: { type: String, unique: true, sparse: true },
+    googleEmail: String,
+    googleName: String,
+    googleImage: String,
+    oauthProvider: {
+      type: String,
+      enum: ['google', 'manual'],
+      default: 'manual',
+    },
     preferences: {
       theme: {
         type: String,

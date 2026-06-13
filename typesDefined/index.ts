@@ -12,6 +12,12 @@ export interface IUser extends Document {
   emailVerificationToken?: string;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  // Google OAuth
+  googleId?: string;
+  googleEmail?: string;
+  googleName?: string;
+  googleImage?: string;
+  oauthProvider?: 'google' | 'manual';
   preferences: {
     theme: 'light' | 'dark';
     currency: string;
