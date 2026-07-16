@@ -4,8 +4,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string;
-  username: string;
-  passwordHash: string;
+  username?: string;
+  passwordHash?: string;
   firstName?: string;
   lastName?: string;
   emailVerified: boolean;

@@ -59,7 +59,10 @@ async function handleLogin() {
   try {
     const response = await fetch(LOGIN_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SubTrack-Client': 'extension',
+      },
       body: JSON.stringify({ email, password }),
     });
 
@@ -70,16 +73,18 @@ async function handleLogin() {
 
     const authData = payload?.data || payload;
     const token = authData?.accessToken;
+    const refreshToken = authData?.refreshToken;
     const user = authData?.user;
     const resolvedUserId = user?.id || user?._id;
 
-    if (!token || !resolvedUserId) {
-      throw new Error('The login response did not include an access token and user ID.');
+    if (!token || !refreshToken || !resolvedUserId) {
+      throw new Error('The login response did not include a complete extension session.');
     }
 
     const result = await chrome.runtime.sendMessage({
       type: 'SET_AUTH',
       token,
+      refreshToken,
       userId: resolvedUserId,
     });
 

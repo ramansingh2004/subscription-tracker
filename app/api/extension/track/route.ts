@@ -3,6 +3,15 @@ import dbConnect from '@/lib/mongodb';
 import { ExtensionTracking } from '@/models/ExtensionTracking.model';
 import { verifyAccessToken } from '@/lib/jwt';
 import { deleteCache, deletePatternCache } from '@/lib/redis-cache-utils';
+import mongoose from 'mongoose';
+
+const TRACKING_EVENT_TYPES = new Set([
+  'page_visit',
+  'time_on_page',
+  'ad_detected',
+  'paywall_detected',
+  'subscription_mention',
+]);
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,8 +48,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and process events
+    const invalidEvent = events.find(
+      (event) =>
+        !event ||
+        !TRACKING_EVENT_TYPES.has(event.type) ||
+        typeof event.domain !== 'string' ||
+        typeof event.url !== 'string'
+    );
+
+    if (invalidEvent) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid tracking event' } },
+        { status: 400 }
+      );
+    }
+
+    const objectUserId = new mongoose.Types.ObjectId(userId);
     const processedEvents = events.map((event) => ({
-      userId,
+      userId: objectUserId,
       type: event.type,
       domain: event.domain,
       url: event.url,
@@ -106,6 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = payload.userId;
+    const objectUserId = new mongoose.Types.ObjectId(userId);
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '7');
 
@@ -116,7 +142,7 @@ export async function GET(request: NextRequest) {
     const stats = await ExtensionTracking.aggregate([
       {
         $match: {
-          userId: userId,
+          userId: objectUserId,
           timestamp: { $gte: startDate.getTime() },
         },
       },
@@ -124,6 +150,15 @@ export async function GET(request: NextRequest) {
         $group: {
           _id: '$type',
           count: { $sum: 1 },
+          totalTime: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', 'time_on_page'] },
+                { $ifNull: ['$metadata.timeSpent', 0] },
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
@@ -132,7 +167,7 @@ export async function GET(request: NextRequest) {
     const topDomains = await ExtensionTracking.aggregate([
       {
         $match: {
-          userId: userId,
+          userId: objectUserId,
           timestamp: { $gte: startDate.getTime() },
           type: { $in: ['page_visit', 'time_on_page'] },
         },
@@ -140,12 +175,22 @@ export async function GET(request: NextRequest) {
       {
         $group: {
           _id: '$domain',
-          count: { $sum: 1 },
-          totalTime: { $sum: '$metadata.timeSpent' },
+          visits: {
+            $sum: { $cond: [{ $eq: ['$type', 'page_visit'] }, 1, 0] },
+          },
+          totalTime: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', 'time_on_page'] },
+                { $ifNull: ['$metadata.timeSpent', 0] },
+                0,
+              ],
+            },
+          },
         },
       },
       {
-        $sort: { count: -1 },
+        $sort: { visits: -1 },
       },
       {
         $limit: 10,
@@ -156,7 +201,7 @@ export async function GET(request: NextRequest) {
     const paywallDomains = await ExtensionTracking.aggregate([
       {
         $match: {
-          userId: userId,
+          userId: objectUserId,
           type: 'paywall_detected',
           timestamp: { $gte: startDate.getTime() },
         },
@@ -179,7 +224,7 @@ export async function GET(request: NextRequest) {
     const adDomains = await ExtensionTracking.aggregate([
       {
         $match: {
-          userId: userId,
+          userId: objectUserId,
           type: 'ad_detected',
           timestamp: { $gte: startDate.getTime() },
         },
@@ -202,7 +247,7 @@ export async function GET(request: NextRequest) {
     const subscriptionMentions = await ExtensionTracking.aggregate([
       {
         $match: {
-          userId: userId,
+          userId: objectUserId,
           type: 'subscription_mention',
           timestamp: { $gte: startDate.getTime() },
         },
@@ -225,14 +270,15 @@ export async function GET(request: NextRequest) {
         data: {
           stats: stats.reduce(
             (acc, stat) => {
-              acc[stat._id] = stat.count;
+              acc[stat._id] =
+                stat._id === 'time_on_page' ? stat.totalTime : stat.count;
               return acc;
             },
             {} as Record<string, number>
           ),
           topDomains: topDomains.map((domain) => ({
             domain: domain._id,
-            visits: domain.count,
+            visits: domain.visits,
             totalTime: domain.totalTime || 0,
           })),
           paywallDomains: paywallDomains.map((domain) => ({

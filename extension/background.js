@@ -1,11 +1,12 @@
 const API_BASE_URL = 'https://subscription-tracker-five-puce.vercel.app';
 const TRACK_ENDPOINT = `${API_BASE_URL}/api/extension/track`;
+const REFRESH_ENDPOINT = `${API_BASE_URL}/api/auth/refresh`;
 const SEND_ALARM = 'subtrack-send-events';
 const SEND_INTERVAL_MINUTES = 1;
 const BATCH_SIZE = 50;
 const MAX_QUEUE_SIZE = 500;
 
-const AUTH_KEYS = ['authToken', 'userId', 'enabled'];
+const AUTH_KEYS = ['authToken', 'refreshToken', 'userId', 'enabled'];
 const STAT_KEYS = [
   'statsDate',
   'todayPagesVisited',
@@ -15,6 +16,7 @@ const STAT_KEYS = [
 ];
 
 let authToken = null;
+let refreshToken = null;
 let userId = null;
 let extensionEnabled = true;
 let eventQueue = [];
@@ -42,6 +44,7 @@ async function initializeExtension() {
   ]);
 
   authToken = stored.authToken || null;
+  refreshToken = stored.refreshToken || null;
   userId = stored.userId || null;
   extensionEnabled = stored.enabled !== false;
   eventQueue = Array.isArray(stored.eventQueue) ? stored.eventQueue : [];
@@ -190,7 +193,7 @@ async function handleMessage(request, sender) {
       await trackSubscriptionMention(sender.tab, request.data);
       return { success: true };
     case 'SET_AUTH':
-      await setAuthentication(request.token, request.userId);
+      await setAuthentication(request.token, request.refreshToken, request.userId);
       return { success: true };
     case 'GET_AUTH':
       return { token: authToken, userId };
@@ -353,7 +356,7 @@ async function sendBatchedEvents() {
   const eventsToSend = eventQueue.slice(0, BATCH_SIZE);
 
   try {
-    const response = await fetch(TRACK_ENDPOINT, {
+    let response = await fetch(TRACK_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -361,6 +364,17 @@ async function sendBatchedEvents() {
       },
       body: JSON.stringify({ userId, events: eventsToSend, timestamp: Date.now() }),
     });
+
+    if (response.status === 401 && (await refreshAccessToken())) {
+      response = await fetch(TRACK_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ userId, events: eventsToSend, timestamp: Date.now() }),
+      });
+    }
 
     if (response.ok) {
       eventQueue.splice(0, eventsToSend.length);
@@ -382,13 +396,48 @@ async function sendBatchedEvents() {
   }
 }
 
-async function setAuthentication(token, uid) {
-  if (!token || !uid) throw new Error('Invalid authentication response');
+async function refreshAccessToken() {
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(REFRESH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SubTrack-Client': 'extension',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) return false;
+    const payload = await response.json();
+    const newAccessToken = payload?.data?.accessToken;
+    if (!newAccessToken) return false;
+
+    authToken = newAccessToken;
+    await chrome.storage.local.set({ authToken });
+    return true;
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    return false;
+  }
+}
+
+async function setAuthentication(token, newRefreshToken, uid) {
+  if (!token || !newRefreshToken || !uid) {
+    throw new Error('Invalid authentication response');
+  }
 
   authToken = token;
+  refreshToken = newRefreshToken;
   userId = uid;
   extensionEnabled = true;
-  await chrome.storage.local.set({ authToken, userId, enabled: true });
+  await chrome.storage.local.set({
+    authToken,
+    refreshToken,
+    userId,
+    enabled: true,
+  });
 
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (tab?.id && isTrackableUrl(tab.url)) {
@@ -401,6 +450,7 @@ async function clearAuthentication({ clearQueue }) {
   if (currentActiveTabId) await finishPageSession(currentActiveTabId);
 
   authToken = null;
+  refreshToken = null;
   userId = null;
   extensionEnabled = false;
   currentActiveTabId = null;
@@ -408,6 +458,7 @@ async function clearAuthentication({ clearQueue }) {
 
   const update = {
     authToken: null,
+    refreshToken: null,
     userId: null,
     enabled: false,
     pageSessions: {},

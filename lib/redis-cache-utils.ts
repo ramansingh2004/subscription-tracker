@@ -1,5 +1,14 @@
 import { getRedis } from '@/lib/redis-client-upstash';
 
+interface SubscriptionListCacheParams {
+  page: number;
+  limit: number;
+  category?: string | null;
+  sortBy: string;
+  sortOrder: number;
+  search?: string | null;
+}
+
 // ============ CACHE KEY GENERATOR ============
 
 export const cacheKeys = {
@@ -8,8 +17,17 @@ export const cacheKeys = {
   userSettings: (userId: string) => `user:settings:${userId}`,
 
   // Subscriptions
-  subscriptionsList: (userId: string, page: number, limit: number) =>
-    `subscriptions:list:${userId}:${page}:${limit}`,
+  subscriptionsList: (userId: string, params: SubscriptionListCacheParams) =>
+    [
+      'subscriptions:list',
+      userId,
+      params.page,
+      params.limit,
+      encodeURIComponent(params.category || 'all'),
+      encodeURIComponent(params.sortBy),
+      params.sortOrder,
+      encodeURIComponent(params.search || ''),
+    ].join(':'),
   subscriptionDetail: (subscriptionId: string) =>
     `subscription:${subscriptionId}`,
   userSubscriptions: (userId: string) => `subscriptions:${userId}`,
@@ -19,7 +37,8 @@ export const cacheKeys = {
   categoryBreakdown: (userId: string) => `analytics:categories:${userId}`,
 
   // Notifications
-  notifications: (userId: string) => `notifications:${userId}`,
+  notifications: (userId: string, page: number, limit: number) =>
+    `notifications:${userId}:${page}:${limit}`,
   notificationCount: (userId: string) => `notifications:unread:${userId}`,
 
   // Exchange rates
@@ -56,12 +75,6 @@ export const CACHE_TTL = {
   TEMP_DATA: 15 * 60, // 15 minutes
 };
 
-// ============ CACHE GET/SET FUNCTIONS ============
-
-/**
- * Get value from cache
- * Returns null if key doesn't exist or error occurs
- */
 export const getCache = async (key: string) => {
   try {
     const redis = await getRedis();
@@ -81,10 +94,6 @@ export const getCache = async (key: string) => {
   }
 };
 
-/**
- * Set value in cache with TTL
- * Returns true on success, false on failure
- */
 export const setCache = async (
   key: string,
   value: any,
@@ -103,9 +112,6 @@ export const setCache = async (
   }
 };
 
-/**
- * Delete cache key
- */
 export const deleteCache = async (key: string): Promise<boolean> => {
   try {
     const redis = await getRedis();
@@ -120,10 +126,6 @@ export const deleteCache = async (key: string): Promise<boolean> => {
   }
 };
 
-/**
- * Delete multiple cache keys by pattern
- * Example: deletePatternCache("subscriptions:*")
- */
 export const deletePatternCache = async (pattern: string): Promise<number> => {
   try {
     const redis = await getRedis();
@@ -141,9 +143,6 @@ export const deletePatternCache = async (pattern: string): Promise<number> => {
   }
 };
 
-/**
- * Clear all user-related caches
- */
 export const clearUserCache = async (userId: string): Promise<void> => {
   try {
     await Promise.all([
@@ -153,7 +152,7 @@ export const clearUserCache = async (userId: string): Promise<void> => {
       deleteCache(cacheKeys.userSubscriptions(userId)),
       deleteCache(cacheKeys.analyticsSummary(userId)),
       deleteCache(cacheKeys.categoryBreakdown(userId)),
-      deleteCache(cacheKeys.notifications(userId)),
+      deletePatternCache(`notifications:${userId}:*`),
       deleteCache(cacheKeys.notificationCount(userId)),
     ]);
     console.log(`✅ Cleared all caches for user: ${userId}`);
@@ -162,9 +161,6 @@ export const clearUserCache = async (userId: string): Promise<void> => {
   }
 };
 
-/**
- * Clear all subscription-related caches for a user
- */
 export const clearSubscriptionCache = async (userId: string): Promise<void> => {
   try {
     await Promise.all([
@@ -179,19 +175,9 @@ export const clearSubscriptionCache = async (userId: string): Promise<void> => {
   }
 };
 
-// ============ CACHE WARMING ============
-
-/**
- * Warm cache by preloading frequently accessed data
- * Call this when user logs in or periodically
- */
 export const warmCache = async (userId: string): Promise<void> => {
   try {
     console.log(`🔥 Warming cache for user: ${userId}`);
-
-    // Import functions that fetch data
-    // This would be called after user logs in
-    // Example: await warmUserCache(userId);
 
     console.log(`✅ Cache warming complete for user: ${userId}`);
   } catch (error) {
@@ -199,11 +185,6 @@ export const warmCache = async (userId: string): Promise<void> => {
   }
 };
 
-// ============ CACHE STATISTICS ============
-
-/**
- * Get cache statistics
- */
 export const getCacheStats = async () => {
   try {
     const redis = await getRedis();
@@ -221,10 +202,6 @@ export const getCacheStats = async () => {
   }
 };
 
-
-/**
- * Monitor cache performance
- */
 export const monitorCache = async (userId: string) => {
   try {
     const redis = await getRedis();
@@ -244,4 +221,11 @@ export const monitorCache = async (userId: string) => {
   } catch (error) {
     console.error('Error monitoring cache:', error);
   }
+};
+
+export const clearNotificationCache = async (userId: string): Promise<void> => {
+  await Promise.all([
+    deletePatternCache(`notifications:${userId}:*`),
+    deleteCache(cacheKeys.notificationCount(userId)),
+  ]);
 };

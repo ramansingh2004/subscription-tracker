@@ -4,6 +4,7 @@ import { Subscription } from '@/models/Subscription.model';
 import { subscriptionSchema } from '@/lib/validation';
 import { verifyAccessToken } from '@/lib/jwt';
 import { ZodError } from 'zod';
+import { clearSubscriptionCache } from '@/lib/redis-cache-utils';
 
 function extractUserId(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -98,6 +99,9 @@ export async function PUT(
       );
     }
 
+
+    await clearSubscriptionCache(userId);
+
     return NextResponse.json(
       { success: true, data: { subscription } },
       { status: 200 }
@@ -146,6 +150,8 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    await clearSubscriptionCache(userId);
 
     return NextResponse.json(
       { success: true, data: { message: 'Subscription deleted' } },

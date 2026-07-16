@@ -7,7 +7,7 @@ import { NotificationService } from '@/lib/notification-service';
 import {
   getCache,
   setCache,
-  deleteCache,
+  clearNotificationCache,
   cacheKeys,
   CACHE_TTL,
 } from '@/lib/redis-cache-utils';
@@ -35,8 +35,15 @@ export async function GET(req: NextRequest) {
 
     const userId = payload.userId;
 
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get('limit') || '10'))
+    );
+
     // ← Check cache
-    const cacheKey = cacheKeys.notifications(userId);
+    const cacheKey = cacheKeys.notifications(userId, page, limit);
     const cachedData = await getCache(cacheKey);
     if (cachedData) {
       return NextResponse.json(
@@ -48,10 +55,6 @@ export async function GET(req: NextRequest) {
         { status: 200 }
       );
     }
-
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
 
     const skip = (page - 1) * limit;
 
@@ -149,8 +152,7 @@ export async function POST(req: NextRequest) {
     );
 
     // ← Invalidate cache
-    await deleteCache(cacheKeys.notifications(payload.userId));
-    await deleteCache(cacheKeys.notificationCount(payload.userId));
+    await clearNotificationCache(payload.userId);
 
     return NextResponse.json(
       {

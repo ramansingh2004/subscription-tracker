@@ -3,7 +3,7 @@ import { checkAndProcessSubRenewals } from '@/lib/subscription-helper';
 
 // ============ SEND REMINDERS (Called by cron job) ============
 
-export async function POST(request: NextRequest) {
+async function runReminders(request: NextRequest) {
   try {
     // Verify the request has correct authorization header
     const authHeader = request.headers.get('authorization');
@@ -41,3 +41,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const GET = runReminders;
+export const POST = runReminders;

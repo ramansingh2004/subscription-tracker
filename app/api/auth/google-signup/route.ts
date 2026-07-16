@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { User } from '@/models/User.model';
-import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import axios from 'axios';
+import dbConnect from '@/lib/mongodb';
+import { generateTokens } from '@/lib/jwt';
+import { setAuthCookies } from '@/lib/auth-cookies';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest) {
 
     // Verify Google token and get user info
     const googleData = await axios.get(
-      `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${credential}`
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      { headers: { Authorization: `Bearer ${credential}` } }
     );
 
     const {
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await mongoose.connect(process.env.MONGODB_URI || '');
+    await dbConnect();
 
     let user = await User.findOne({ email });
 
@@ -72,29 +74,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Generate JWT
-    const accessToken = jwt.sign(
-      { 
-        userId: user._id, 
-        email: user.email,
-        provider: 'google',
-      },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '7d' }
-    );
-
-    // Generate refresh token
-    const refreshToken = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_REFRESH_SECRET || 'refresh-secret',
-      { expiresIn: '30d' }
-    );
-
-    return NextResponse.json(
+    const { accessToken, refreshToken } = generateTokens(user);
+    const response = NextResponse.json(
       {
         data: {
           accessToken,
-          refreshToken,
           user: {
             id: user._id,
             email: user.email,
@@ -106,12 +90,15 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+
+    setAuthCookies(response, accessToken, refreshToken);
+    return response;
+  } catch (error) {
     console.error('Google signup error:', error);
+    const message = error instanceof Error ? error.message : 'Google signup failed';
     return NextResponse.json(
       { 
-        message: error.message || 'Google signup failed',
-        error: error.message,
+        message,
       },
       { status: 400 }
     );

@@ -6,7 +6,7 @@ import { verifyAccessToken } from '@/lib/jwt';
 import {
   getCache,
   setCache,
-  deleteCache,
+  clearNotificationCache,
   cacheKeys,
   CACHE_TTL,
 } from '@/lib/redis-cache-utils';
@@ -121,8 +121,8 @@ export async function PUT(req: NextRequest) {
     }
 
     // Mark as read
-    const notification = await Notification.findByIdAndUpdate(
-      notificationId,
+    const notification = await Notification.findOneAndUpdate(
+      { _id: notificationId, userId: payload.userId },
       {
         read: true,
         readAt: new Date(),
@@ -138,8 +138,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // ← Invalidate caches
-    await deleteCache(cacheKeys.notificationCount(payload.userId));
-    await deleteCache(cacheKeys.notifications(payload.userId));
+    await clearNotificationCache(payload.userId);
 
     return NextResponse.json(
       {

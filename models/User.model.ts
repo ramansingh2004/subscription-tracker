@@ -14,12 +14,17 @@ const userSchema = new Schema<IUser>(
     },
     username: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+      required: function (this: IUser): boolean {
+        return !this.googleId;
+      },
     },
     passwordHash: {
       type: String,
-      required: true,
+      required: function (this: IUser): boolean {
+        return !this.googleId;
+      },
     },
     firstName: String,
     lastName: String,
@@ -67,6 +72,7 @@ const userSchema = new Schema<IUser>(
 // Hash password before saving
 userSchema.pre('save', async function () {
   if (!this.isModified('passwordHash')) return;
+  if (!this.passwordHash) return;
 
   const salt = await bcrypt.genSalt(10);
   this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
@@ -76,6 +82,7 @@ userSchema.pre('save', async function () {
 userSchema.methods.comparePassword = async function (
   password: string
 ): Promise<boolean> {
+  if (!this.passwordHash) return false;
   return bcrypt.compare(password, this.passwordHash);
 };
 

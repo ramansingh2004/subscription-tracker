@@ -2,13 +2,18 @@
 
 import { useNotifications } from '@/lib/hooks';
 import { useState } from 'react';
-import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { EmptyState } from '@/components/shared/EmptyState';
 import NotificationsSkeleton from '@/components/notifications/NotificationsSkeleton';
 
 export default function NotificationsContent() {
-  const { notifications, unreadCount, isLoading, markAsRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    deleteNotification,
+  } = useNotifications();
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -21,9 +26,8 @@ export default function NotificationsContent() {
   const handleDelete = async (id: string) => {
     try {
       setDeletingId(id);
-      await apiClient.delete(`/notifications/${id}`);
+      await deleteNotification(id);
       toast.success('Notification deleted');
-      // Refetch would happen automatically via query invalidation
     } catch (error) {
       toast.error('Failed to delete notification');
     } finally {

@@ -20,7 +20,7 @@ import { NotificationService } from '@/lib/notification-service';
  *   -H "Authorization: Bearer YOUR_CRON_SECRET"
  */
 
-export async function POST(request: NextRequest) {
+async function processNotifications(request: NextRequest) {
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
@@ -61,36 +61,5 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// For GET requests (browser testing)
-export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get('secret');
-
-  if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
-  try {
-    await dbConnect();
-    const result = await NotificationService.processQueuedNotifications();
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Notification queues processed',
-        data: result,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
-}
+export const GET = processNotifications;
+export const POST = processNotifications;

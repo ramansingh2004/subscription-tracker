@@ -71,8 +71,12 @@ export default function LoginPage() {
         setGoogleLoading(false);
       }
     },
-    onError: () => {
-      toast.error('Google login failed');
+    onError: (errorResponse) => {
+      toast.error(
+        errorResponse.error_description ||
+          errorResponse.error ||
+          'Google login failed'
+      );
       setGoogleLoading(false);
     },
     flow: 'implicit',
@@ -215,7 +219,10 @@ export default function LoginPage() {
         {!showManualForm && (
           <button
             type="button"
-            onClick={() => googleSignIn()}
+            onClick={() => {
+              setGoogleLoading(true);
+              googleSignIn();
+            }}
             disabled={googleLoading}
             className="w-full py-3 px-4 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 flex items-center justify-center gap-2 font-medium text-gray-900 mb-4"
           >

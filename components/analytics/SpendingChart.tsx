@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -16,47 +15,27 @@ import { useAuthStore } from '@/store/authStore';
 
 interface SpendingChartProps {
   currency?: string;
+  monthlyCost?: number;
 }
 
-export function SpendingChart({ currency = 'USD' }: SpendingChartProps) {
-  const [data, setData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function SpendingChart({
+  currency = 'USD',
+  monthlyCost = 0,
+}: SpendingChartProps) {
   const rates = useAuthStore((state) => state.rates);
-
-  useEffect(() => {
-    const fetchTrends = async () => {
-      try {
-        // Generate 12-month data
-        const months = [];
-        for (let i = 11; i >= 0; i--) {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          const usdCost = Math.random() * 200 + 50; // Simulated USD data
-          const convertedCost = CurrencyConverter.convert(usdCost, 'USD', currency, rates);
-          months.push({
-            month: date.toLocaleDateString('en-US', { month: 'short' }),
-            cost: convertedCost,
-          });
-        }
-        setData(months);
-      } catch (error) {
-        console.error('Failed to fetch trends:', error);
-      } finally {
-        setIsLoading(false);
-      }
+  const data = Array.from({ length: 12 }, (_, index) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (11 - index));
+    return {
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      cost: CurrencyConverter.convert(monthlyCost, 'USD', currency, rates),
     };
-
-    fetchTrends();
-  }, [currency, rates]);
-
-  if (isLoading) {
-    return <div className="bg-white p-6 rounded-lg shadow h-80">Loading...</div>;
-  }
+  });
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        12-Month Spending Trend
+        Current Monthly Spend Projection
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>

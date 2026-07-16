@@ -128,9 +128,12 @@ export default function AnalyticsContent() {
         {/* Spending Trend Chart */}
         <div className="bg-white p-6 rounded-lg border border-gray-300 shadow-sm">
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            Spending Trend (Last 12 Months)
+            Monthly Spend Projection
           </h2>
-          <SpendingChart currency={currency} />
+          <SpendingChart
+            currency={currency}
+            monthlyCost={summary?.monthlyCost || 0}
+          />
         </div>
 
         {/* Category Breakdown Chart */}

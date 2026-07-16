@@ -9,6 +9,14 @@ import {
   cacheKeys,
   CACHE_TTL,
 } from '@/lib/redis-cache-utils';
+import { z } from 'zod';
+
+const profileUpdateSchema = z
+  .object({
+    firstName: z.string().trim().min(2).max(80).optional(),
+    lastName: z.string().trim().min(2).max(80).optional(),
+  })
+  .strict();
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,7 +133,7 @@ export async function PUT(request: NextRequest) {
     await dbConnect();
 
     const userId = payload.userId;
-    const body = await request.json();
+    const body = profileUpdateSchema.parse(await request.json());
 
     const user = await User.findByIdAndUpdate(userId, body, {
       new: true,
@@ -158,12 +166,23 @@ export async function PUT(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('Update user error:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { message: 'Invalid profile update', details: error.issues },
+        },
+        { status: 400 }
+      );
+    }
+
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         success: false,
-        error: { message: error.message || 'Internal server error' },
+        error: { message },
       },
       { status: 500 }
     );

@@ -4,40 +4,38 @@ import { IUser } from '@/typesDefined/index';
 interface AuthState {
   user: IUser | null;
   isAuthenticated: boolean;
-  currency: string; // ← Add currency to store
-  rates: Record<string, number>; // ← Add exchange rates to store
+  currency: string; 
+  rates: Record<string, number>; 
   setUser: (user: IUser) => void;
-  setCurrency: (currency: string) => void; // ← New action
-  updateUserWithCurrency: (user: IUser) => void; // ← New action
-  setRates: (rates: Record<string, number>) => void; // ← New action
+  setCurrency: (currency: string) => void; 
+  updateUserWithCurrency: (user: IUser) => void; 
+  setRates: (rates: Record<string, number>) => void; 
   clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  currency: 'USD', // Default currency
+  currency: 'USD',
   rates: {
     USD: 1,
     EUR: 0.92,
     GBP: 0.79,
     INR: 83.12,
-  }, // Default exchange rates
+  }, 
   
   setUser: (user) =>
     set({
       user,
       isAuthenticated: !!user,
-      currency: user?.preferences?.currency || 'USD', // ← Set currency from user
+      currency: user?.preferences?.currency || 'USD',
     }),
 
-  // ← NEW: Set currency directly
   setCurrency: (currency) =>
     set({
       currency,
     }),
 
-  // ← NEW: Update user and currency together
   updateUserWithCurrency: (user) =>
     set({
       user,
@@ -45,7 +43,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       currency: user?.preferences?.currency || 'USD',
     }),
 
-  // ← NEW: Set exchange rates directly
   setRates: (rates) =>
     set({
       rates,

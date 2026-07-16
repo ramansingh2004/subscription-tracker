@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User.model';
 import { loginSchema } from '@/lib/validation';
 import { generateTokens } from '@/lib/jwt';
+import { setAuthCookies } from '@/lib/auth-cookies';
 import { ZodError } from 'zod';
 
 export async function POST(request: NextRequest) {
@@ -59,30 +60,15 @@ export async function POST(request: NextRequest) {
             lastName: user.lastName,
           },
           accessToken,
+          ...(request.headers.get('x-subtrack-client') === 'extension'
+            ? { refreshToken }
+            : {}),
         },
       },
       { status: 200 }
     );
 
-    // Set refresh token in httpOnly cookie
-    response.cookies.set({
-      name: 'refreshToken',
-      value: refreshToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    // Set access token cookie (matches refresh route behavior)
-    response.cookies.set({
-      name: 'accessToken',
-      value: accessToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 15 * 60, // 15 minutes
-    });
+    setAuthCookies(response, accessToken, refreshToken);
 
     return response;
   } catch (error) {

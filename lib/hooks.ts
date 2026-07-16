@@ -34,11 +34,16 @@ export function useAuth() {
     checkAuth();
   }, [setUser, clearAuth]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    clearAuth();
-    router.push('/login');
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      clearAuth();
+      router.replace('/login');
+      router.refresh();
+    }
   }, [clearAuth, router]);
 
   return { user, isLoading, logout };
@@ -151,10 +156,33 @@ export function useNotifications() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      throw error;
     }
   }, []);
 
-  return { notifications, unreadCount, isLoading, markAsRead };
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      await apiClient.delete(`/notifications/${id}`);
+      setNotifications((prev) => {
+        const deletedNotification = prev.find((notification) => notification._id === id);
+        if (deletedNotification && !deletedNotification.read) {
+          setUnreadCount((count) => Math.max(0, count - 1));
+        }
+        return prev.filter((notification) => notification._id !== id);
+      });
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      throw error;
+    }
+  }, []);
+
+  return {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    deleteNotification,
+  };
 }
 
 // ============ useInvalidateQueries Hook (Helper) ============

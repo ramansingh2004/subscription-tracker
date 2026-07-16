@@ -58,7 +58,14 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     // ← NEW: Generate cache key
-    const cacheKey = cacheKeys.subscriptionsList(userId, page, limit);
+    const cacheKey = cacheKeys.subscriptionsList(userId, {
+      page,
+      limit,
+      category,
+      sortBy,
+      sortOrder,
+      search,
+    });
 
     // ← NEW: Try to get from cache
     const cachedData = await getCache(cacheKey);

@@ -2,15 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import {User} from '@/models/User.model';
 import { verifyRefreshToken, generateAccessToken } from '@/lib/jwt';
+import { setAccessTokenCookie } from '@/lib/auth-cookies';
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
     // Get refresh token from cookie or body
-    const refreshToken =
-      req.cookies.get('refreshToken')?.value ||
-      (await req.json()).refreshToken;
+    let refreshToken = req.cookies.get('refreshToken')?.value;
+
+    if (!refreshToken) {
+      try {
+        const body = await req.json();
+        refreshToken = body?.refreshToken;
+      } catch {
+        // An empty body is valid when the cookie is missing; return 401 below.
+      }
+    }
 
     if (!refreshToken) {
       return NextResponse.json(
@@ -23,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify refresh token
-    const payload = verifyRefreshToken(refreshToken) as any;
+    const payload = verifyRefreshToken(refreshToken);
     if (!payload) {
       return NextResponse.json(
         {
@@ -68,18 +76,13 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
-    // Set new access token cookie
-    response.cookies.set('accessToken', newAccessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 15 * 60, // 15 minutes
-    });
+    setAccessTokenCookie(response, newAccessToken);
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Token refresh failed';
     return NextResponse.json(
-      { success: false, error: { message: error.message } },
+      { success: false, error: { message } },
       { status: 500 }
     );
   }

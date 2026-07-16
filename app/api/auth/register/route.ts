@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User.model';
 import { registerSchema } from '@/lib/validation';
 import { generateTokens } from '@/lib/jwt';
+import { setAuthCookies } from '@/lib/auth-cookies';
 import { ZodError } from 'zod';
 
 export async function POST(request: NextRequest) {
@@ -56,22 +57,13 @@ export async function POST(request: NextRequest) {
             firstName: user.firstName,
             lastName: user.lastName,
           },
-          accessToken, // ✅ Include in response body
-          refreshToken, // ✅ Also include for frontend (will use httpOnly cookie as backup)
+          accessToken,
         },
       },
       { status: 201 }
     );
 
-    // Set refresh token in httpOnly cookie (secure backup)
-    response.cookies.set({
-      name: 'refreshToken',
-      value: refreshToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    setAuthCookies(response, accessToken, refreshToken);
 
     return response;
   } catch (error) {

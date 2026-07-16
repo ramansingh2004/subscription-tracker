@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import {Notification} from '@/models/Notification.model';
 import { verifyAccessToken } from '@/lib/jwt';
+import { clearNotificationCache } from '@/lib/redis-cache-utils';
 
 export async function PUT(
   req: NextRequest,
@@ -30,7 +31,7 @@ export async function PUT(
     const { id } = await params;
     const notification = await Notification.findOneAndUpdate(
       { _id: id, userId: payload.userId },
-      { read: true },
+      { read: true, readAt: new Date() },
       { new: true }
     );
 
@@ -40,6 +41,8 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    await clearNotificationCache(payload.userId);
 
     return NextResponse.json({
       success: true,
@@ -78,10 +81,19 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    await Notification.findOneAndDelete({
+    const notification = await Notification.findOneAndDelete({
       _id: id,
       userId: payload.userId,
     });
+
+    if (!notification) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Notification not found' } },
+        { status: 404 }
+      );
+    }
+
+    await clearNotificationCache(payload.userId);
 
     return NextResponse.json({
       success: true,

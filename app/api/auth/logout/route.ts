@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { clearAuthCookies } from '@/lib/auth-cookies';
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     // Create response
     const response = NextResponse.json(
@@ -11,26 +12,13 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
-    // Clear the access token cookie (if using cookies)
-    response.cookies.set('accessToken', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-    });
-
-    // Clear refresh token cookie (if using cookies)
-    response.cookies.set('refreshToken', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-    });
+    clearAuthCookies(response);
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Logout failed';
     return NextResponse.json(
-      { success: false, error: { message: error.message } },
+      { success: false, error: { message } },
       { status: 500 }
     );
   }
