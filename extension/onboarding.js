@@ -1,116 +1,130 @@
-// ============ INITIALIZATION ============
+const APP_BASE_URL = 'https://subscription-tracker-five-puce.vercel.app';
+const LOGIN_URL = `${APP_BASE_URL}/api/auth/login`;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      setupEventListeners();
-      await checkAuthStatus();
+document.addEventListener('DOMContentLoaded', async () => {
+  setupEventListeners();
+  await checkAuthStatus();
+});
+
+async function checkAuthStatus() {
+  try {
+    const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
+    if (state?.authenticated) showSuccessView();
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    showError('Unable to connect to the extension service worker. Reload the extension.');
+  }
+}
+
+function setupEventListeners() {
+  document.getElementById('loginButton')?.addEventListener('click', handleLogin);
+  document.getElementById('signupButton')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: `${APP_BASE_URL}/signup` });
+  });
+  document.getElementById('goToDashboardButton')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: `${APP_BASE_URL}/extension` });
+    window.close();
+  });
+
+  for (const inputId of ['emailInput', 'passwordInput']) {
+    document.getElementById(inputId)?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') handleLogin();
+    });
+  }
+}
+
+async function handleLogin() {
+  const email = document.getElementById('emailInput')?.value.trim();
+  const password = document.getElementById('passwordInput')?.value;
+  const button = document.getElementById('loginButton');
+
+  if (!email || !password) {
+    showError('Please enter your email and password.');
+    return;
+  }
+
+  hideError();
+  setButtonLoading(button, true);
+
+  try {
+    const response = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
 
-    async function checkAuthStatus() {
-      try {
-        const stored = await chrome.storage.local.get(['authToken', 'userId']);
-        if (stored.authToken && stored.userId) {
-          showSuccessView();
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      }
+    const payload = await readJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(getApiError(payload, 'Login failed. Please check your credentials.'));
     }
 
-    // ============ EVENT LISTENERS ============
+    const authData = payload?.data || payload;
+    const token = authData?.accessToken;
+    const user = authData?.user;
+    const userId = user?.id || user?._id;
 
-    function setupEventListeners() {
-      document.getElementById('loginButton').addEventListener('click', handleLogin);
-      document.getElementById('signupButton').addEventListener('click', handleSignup);
-      document
-        .getElementById('goToDashboardButton')
-        .addEventListener('click', goToDashboard);
-
-      document.getElementById('emailInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-      });
-
-      document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-      });
+    if (!token || !userId) {
+      throw new Error('The login response did not include an access token and user ID.');
     }
 
-    // ============ LOGIN ============
+    const result = await chrome.runtime.sendMessage({
+      type: 'SET_AUTH',
+      token,
+      userId,
+    });
 
-    async function handleLogin() {
-      try {
-        const email = document.getElementById('emailInput').value;
-        const password = document.getElementById('passwordInput').value;
-
-        if (!email || !password) {
-          showError('Please enter email and password');
-          return;
-        }
-
-        const button = document.getElementById('loginButton');
-        button.disabled = true;
-        button.innerHTML = '<span class="spinner"></span>';
-
-        const response = await fetch('https://subscription-tracker-five-puce.vercel.app/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Login failed. Please check your credentials.');
-        }
-
-        const data = await response.json();
-        const { accessToken, user } = data.data;
-
-        // Save auth locally
-        await chrome.storage.local.set({
-          authToken: accessToken,
-          userId: user._id,
-          enabled: true
-        });
-
-        // Send auth to background script
-        await chrome.runtime.sendMessage({
-          type: 'SET_AUTH',
-          token: accessToken,
-          userId: user._id,
-        });
-
-        showSuccessView();
-      } catch (error) {
-        showError(error.message || 'Login failed');
-      } finally {
-        const button = document.getElementById('loginButton');
-        button.disabled = false;
-        button.textContent = 'Continue with SubTrack';
-      }
+    if (!result?.success) {
+      throw new Error(result?.error || 'The extension could not save your session.');
     }
 
-    function handleSignup() {
-      window.open('https://subscription-tracker-five-puce.vercel.app/signup', '_blank');
-    }
+    showSuccessView();
+  } catch (error) {
+    console.error('Onboarding login failed:', error);
+    showError(error.message || 'Login failed.');
+  } finally {
+    setButtonLoading(button, false, 'Continue with SubTrack');
+  }
+}
 
-    function goToDashboard() {
-      window.open('https://subscription-tracker-five-puce.vercel.app/extension', '_blank');
-      window.close();
-    }
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
 
-    // ============ VIEW MANAGEMENT ============
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`The server returned an invalid response (${response.status}).`);
+  }
+}
 
-    function showSuccessView() {
-      document.getElementById('loginView').classList.add('hidden');
-      document.getElementById('successView').classList.remove('hidden');
-    }
+function getApiError(payload, fallback) {
+  return payload?.message || payload?.error?.message || payload?.error || fallback;
+}
 
-    function showError(message) {
-      const errorEl = document.getElementById('errorMessage');
-      errorEl.textContent = message;
-      errorEl.classList.remove('hidden');
+function setButtonLoading(button, loading, label = '') {
+  if (!button) return;
+  button.disabled = loading;
+  if (loading) {
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    button.replaceChildren(spinner);
+  } else {
+    button.textContent = label;
+  }
+}
 
-      setTimeout(() => {
-        errorEl.classList.add('hidden');
-      }, 5000);
-    }
+function showSuccessView() {
+  document.getElementById('loginView')?.classList.add('hidden');
+  document.getElementById('successView')?.classList.remove('hidden');
+}
+
+function showError(message) {
+  const errorElement = document.getElementById('errorMessage');
+  if (!errorElement) return;
+  errorElement.textContent = message;
+  errorElement.classList.remove('hidden');
+}
+
+function hideError() {
+  document.getElementById('errorMessage')?.classList.add('hidden');
+}

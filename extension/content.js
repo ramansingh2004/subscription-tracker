@@ -1,178 +1,118 @@
-// content.js - Runs on every page to detect ads, paywalls, subscriptions
-
-(function () {
+(() => {
   'use strict';
 
-  // ============ AD DETECTION ============
+  let adReported = false;
+  let paywallReported = false;
+  let lastSubscriptionSignature = '';
 
-  function detectAds() {
+  const AD_SELECTORS = [
+    '[data-ad-slot]',
+    '[data-ad-client]',
+    '.adsbygoogle',
+    'iframe[src*="doubleclick.net"]',
+    'iframe[src*="googlesyndication.com"]',
+    '[id^="google_ads_"]',
+    '[class~="advertisement"]',
+    '[data-component="Advertisement"]',
+  ];
+
+  const PAYWALL_PATTERNS = [
+    /subscribe to (?:read|continue)/i,
+    /subscription required/i,
+    /sign (?:up|in) to continue/i,
+    /you(?:'ve| have) reached your (?:article|free) limit/i,
+    /membership required/i,
+    /unlock unlimited/i,
+  ];
+
+  const PAYWALL_SELECTORS = [
+    '[class*="paywall"]',
+    '[id*="paywall"]',
+    '[class*="subscription-prompt"]',
+    '[data-paywall-id]',
+    '[data-testid*="paywall"]',
+  ];
+
+  const SUBSCRIPTION_KEYWORDS = [
+    'subscription',
+    'monthly plan',
+    'annual plan',
+    'yearly plan',
+    'premium membership',
+    'pro account',
+    'pro plan',
+    'recurring charge',
+    'auto-renew',
+    'payment method',
+  ];
+
+  async function sendMessage(message) {
     try {
-      const adSelectors = [
-        '[data-ad-slot]',
-        '[data-ad-client]',
-        'div.adsbygoogle',
-        'iframe[src*="ads"]',
-        'div[id*="ad"]',
-        'div[id*="advertisement"]',
-        'div[class*="ad-"]',
-        'div[class*="ad_"]',
-        'div[class*="advertisement"]',
-        '.advertisement__container',
-        '[data-component="Advertisement"]',
-      ];
-
-      let adsFound = false;
-
-      for (const selector of adSelectors) {
-        if (document.querySelector(selector)) {
-          adsFound = true;
-          break;
-        }
-      }
-
-      if (adsFound) {
-        chrome.runtime.sendMessage({ type: 'AD_DETECTED' });
-      }
+      await chrome.runtime.sendMessage(message);
     } catch (error) {
-      console.log('Ad detection error:', error);
+      // This can happen briefly while an unpacked extension is being reloaded.
+      if (!String(error?.message || error).includes('Extension context invalidated')) {
+        console.debug('SubTrack message skipped:', error);
+      }
     }
   }
 
-  // ============ PAYWALL DETECTION ============
+  function getPageText() {
+    if (!document.body) return '';
+    // Limit scanning so large/infinite pages do not cause repeated expensive work.
+    return (document.body.innerText || '').slice(0, 500000).toLowerCase();
+  }
 
-  function detectPaywall() {
-    try {
-      const paywallPatterns = [
-        /paywall/i,
-        /subscribe to read/i,
-        /subscription required/i,
-        /sign up to continue/i,
-        /read full story/i,
-        /limited articles/i,
-        /membership required/i,
-        /unlock unlimited/i,
-        /continue reading/i,
-        /view the rest/i,
-      ];
+  async function runDetection() {
+    if (!document.body) return;
 
-      if (!document.body) return;
-      const bodyText = document.body.innerText.toLowerCase();
-      const hasPaywallText = paywallPatterns.some((pattern) =>
-        pattern.test(bodyText)
-      );
+    const pageText = getPageText();
 
-      const paywallSelectors = [
-        '[class*="paywall"]',
-        '[id*="paywall"]',
-        '[class*="subscription-prompt"]',
-        '[class*="meter"]',
-        '[class*="metering"]',
-        'div[data-paywall-id]',
-      ];
-
-      const hasPaywallElement = paywallSelectors.some((selector) =>
-        document.querySelector(selector)
-      );
-
-      if (hasPaywallText || hasPaywallElement) {
-        chrome.runtime.sendMessage({ type: 'PAYWALL_DETECTED' });
-      }
-    } catch (error) {
-      console.log('Paywall detection error:', error);
+    if (!adReported && AD_SELECTORS.some((selector) => document.querySelector(selector))) {
+      adReported = true;
+      await sendMessage({ type: 'AD_DETECTED' });
     }
-  }
 
-  // ============ SUBSCRIPTION MENTION DETECTION ============
-
-  function detectSubscriptionMentions() {
-    try {
-      const subscriptionKeywords = [
-        'subscription',
-        'monthly plan',
-        'annual plan',
-        'yearly plan',
-        'premium membership',
-        'pro account',
-        'pro plan',
-        'pricing',
-        'plans',
-        'billing',
-        'renew',
-        'auto-renew',
-        'recurring charge',
-        'credit card',
-        'payment method',
-      ];
-
-      if (!document.body) return;
-      const bodyText = document.body.innerText.toLowerCase();
-      const found = [];
-
-      for (const keyword of subscriptionKeywords) {
-        if (bodyText.includes(keyword.toLowerCase())) {
-          found.push(keyword);
-        }
-      }
-
-      if (found.length > 0) {
-        chrome.runtime.sendMessage({
-          type: 'SUBSCRIPTION_MENTION',
-          data: {
-            mentions: found,
-            context: document.title,
-          },
-        });
-      }
-    } catch (error) {
-      console.log('Subscription detection error:', error);
+    if (
+      !paywallReported &&
+      (PAYWALL_PATTERNS.some((pattern) => pattern.test(pageText)) ||
+        PAYWALL_SELECTORS.some((selector) => document.querySelector(selector)))
+    ) {
+      paywallReported = true;
+      await sendMessage({ type: 'PAYWALL_DETECTED' });
     }
-  }
 
-  // ============ INITIALIZATION ============
+    const mentions = SUBSCRIPTION_KEYWORDS.filter((keyword) =>
+      pageText.includes(keyword)
+    );
+    const signature = mentions.join('|');
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        detectAds();
-        detectPaywall();
-        detectSubscriptionMentions();
-      }, 1000);
-    });
-  } else {
-    setTimeout(() => {
-      detectAds();
-      detectPaywall();
-      detectSubscriptionMentions();
-    }, 500);
-  }
-
-  const observer = new MutationObserver(
-    debounce(() => {
-      detectAds();
-      detectPaywall();
-      detectSubscriptionMentions();
-    }, 2000)
-  );
-
-  try {
-    const targetNode = document.documentElement || document.body || document;
-    if (targetNode) {
-      observer.observe(targetNode, {
-        childList: true,
-        subtree: true,
+    if (mentions.length > 0 && signature !== lastSubscriptionSignature) {
+      lastSubscriptionSignature = signature;
+      await sendMessage({
+        type: 'SUBSCRIPTION_MENTION',
+        data: { mentions, context: document.title },
       });
     }
-  } catch (error) {
-    console.log('SubTrack: MutationObserver initialization error:', error);
   }
 
-  // ============ HELPERS ============
+  const debouncedDetection = debounce(runDetection, 1500);
 
-  function debounce(func, wait) {
-    let timeout;
-    return function (...args) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
+  runDetection();
+
+  const observer = new MutationObserver(debouncedDetection);
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+
+  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
+
+  function debounce(fn, wait) {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), wait);
     };
   }
 })();

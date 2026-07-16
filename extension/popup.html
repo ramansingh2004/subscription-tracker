@@ -139,6 +139,8 @@
     .toggle-switch {
       width: 40px;
       height: 24px;
+      padding: 0;
+      border: 0;
       background: #d1d5db;
       border-radius: 12px;
       position: relative;
@@ -319,7 +321,13 @@
         <div class="section-title">⚙️ Tracking</div>
         <div class="toggle">
           <span>Enable Tracking</span>
-          <div id="trackingToggle" class="toggle-switch active"></div>
+          <button
+            id="trackingToggle"
+            type="button"
+            class="toggle-switch active"
+            aria-label="Enable or pause tracking"
+            aria-pressed="true"
+          ></button>
         </div>
       </div>
 

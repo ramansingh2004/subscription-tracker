@@ -1,172 +1,144 @@
 // popup.js - Popup UI logic
 
-let currentUser = null;
-let trackingEnabled = true;
+const APP_BASE_URL = 'https://subscription-tracker-five-puce.vercel.app';
+const LOGIN_URL = `${APP_BASE_URL}/api/auth/login`;
 
-// ============ INITIALIZATION ============
+let currentUser = null;
+let trackingEnabled = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuthStatus();
   setupEventListeners();
-  loadStats();
+  await checkExtensionState();
+  await loadStats();
 });
 
-async function checkAuthStatus() {
+async function checkExtensionState() {
   try {
-    const stored = await chrome.storage.local.get(['authToken', 'userId']);
-
-    if (stored.authToken && stored.userId) {
-      currentUser = stored.userId;
+    const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
+    if (state?.authenticated) {
+      currentUser = state.userId;
+      trackingEnabled = state.enabled !== false;
       showMainView();
-      loadStats();
+      updateTrackingToggle();
     } else {
       showLoginView();
     }
   } catch (error) {
-    console.error('Auth check error:', error);
+    console.error('Extension state check failed:', error);
     showLoginView();
+    showError('Unable to connect to the extension service worker. Reload the extension.');
   }
 }
 
-// ============ VIEW MANAGEMENT ============
-
-function showLoginView() {
-  document.getElementById('loginView').classList.remove('hidden');
-  document.getElementById('mainView').classList.add('hidden');
-}
-
-function showMainView() {
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('mainView').classList.remove('hidden');
-}
-
-// ============ EVENT LISTENERS ============
-
 function setupEventListeners() {
-  // Login
   document.getElementById('loginButton')?.addEventListener('click', handleLogin);
-  document.getElementById('emailInput')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  });
-  document.getElementById('passwordInput')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  });
-
-  // Logout
   document.getElementById('logoutButton')?.addEventListener('click', handleLogout);
-
-  // Tracking toggle
   document.getElementById('trackingToggle')?.addEventListener('click', toggleTracking);
-}
+  document.getElementById('dashboardButton')?.addEventListener('click', openDashboard);
 
-// ============ LOGIN/LOGOUT ============
+  for (const inputId of ['emailInput', 'passwordInput']) {
+    document.getElementById(inputId)?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') handleLogin();
+    });
+  }
+}
 
 async function handleLogin() {
+  const email = document.getElementById('emailInput')?.value.trim();
+  const password = document.getElementById('passwordInput')?.value;
+  const loginButton = document.getElementById('loginButton');
+
+  if (!email || !password) {
+    showError('Please enter your email and password.');
+    return;
+  }
+
+  hideError();
+  setButtonLoading(loginButton, true);
+
   try {
-    const email = document.getElementById('emailInput').value;
-    const password = document.getElementById('passwordInput').value;
-
-    if (!email || !password) {
-      showError('Please enter email and password');
-      return;
-    }
-
-    const loginButton = document.getElementById('loginButton');
-    loginButton.disabled = true;
-    loginButton.innerHTML = '<span class="spinner"></span>';
-
-    const response = await fetch('https://subscription-tracker-five-puce.vercel.app/api/auth/login', {
+    const response = await fetch(LOGIN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
+    const payload = await readJsonResponse(response);
     if (!response.ok) {
-      throw new Error('Login failed');
+      throw new Error(getApiError(payload, 'Login failed. Please check your credentials.'));
     }
 
-    const data = await response.json();
-    const { accessToken, user } = data.data;
+    const authData = payload?.data || payload;
+    const token = authData?.accessToken;
+    const user = authData?.user;
+    const resolvedUserId = user?.id || user?._id;
 
-    // Save auth locally
-    await chrome.storage.local.set({
-      authToken: accessToken,
-      userId: user._id,
-      enabled: true
-    });
+    if (!token || !resolvedUserId) {
+      throw new Error('The login response did not include an access token and user ID.');
+    }
 
-    // Send auth to background script
-    await chrome.runtime.sendMessage({
+    const result = await chrome.runtime.sendMessage({
       type: 'SET_AUTH',
-      token: accessToken,
-      userId: user._id,
+      token,
+      userId: resolvedUserId,
     });
 
-    currentUser = user._id;
+    if (!result?.success) {
+      throw new Error(result?.error || 'The extension could not save your session.');
+    }
+
+    currentUser = resolvedUserId;
+    trackingEnabled = true;
     showMainView();
-    loadStats();
+    updateTrackingToggle();
+    await loadStats();
   } catch (error) {
-    showError(error.message || 'Login failed');
+    console.error('Login error:', error);
+    showError(error.message || 'Login failed.');
   } finally {
-    const loginButton = document.getElementById('loginButton');
-    loginButton.disabled = false;
-    loginButton.textContent = 'Sign In';
+    setButtonLoading(loginButton, false, 'Sign In');
   }
 }
 
 async function handleLogout() {
+  if (!confirm('Are you sure you want to log out?')) return;
+
   try {
-    if (!confirm('Are you sure you want to logout?')) return;
-
-    await chrome.runtime.sendMessage({ type: 'DISABLE_TRACKING' });
-
-    // Clear local storage
-    await chrome.storage.local.clear();
-
-    currentUser = null;
-    showLoginView();
-
-    // Clear inputs
-    document.getElementById('emailInput').value = '';
-    document.getElementById('passwordInput').value = '';
+    await chrome.runtime.sendMessage({ type: 'LOGOUT' });
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('Logout message failed:', error);
   }
-}
 
-// ============ TRACKING CONTROL ============
+  currentUser = null;
+  trackingEnabled = false;
+  document.getElementById('emailInput').value = '';
+  document.getElementById('passwordInput').value = '';
+  showLoginView();
+}
 
 async function toggleTracking() {
-  try {
-    const toggle = document.getElementById('trackingToggle');
-    trackingEnabled = !trackingEnabled;
+  const previousValue = trackingEnabled;
+  trackingEnabled = !trackingEnabled;
+  updateTrackingToggle();
 
-    if (trackingEnabled) {
-      toggle.classList.add('active');
-      await chrome.runtime.sendMessage({ type: 'ENABLE_TRACKING' });
-      showSuccess('Tracking enabled');
-    } else {
-      toggle.classList.remove('active');
-      await chrome.runtime.sendMessage({ type: 'DISABLE_TRACKING' });
-      showSuccess('Tracking disabled');
-    }
+  try {
+    const result = await chrome.runtime.sendMessage({
+      type: trackingEnabled ? 'ENABLE_TRACKING' : 'DISABLE_TRACKING',
+    });
+
+    if (!result?.success) throw new Error(result?.error || 'Unable to update tracking.');
+    showSuccess(trackingEnabled ? 'Tracking enabled' : 'Tracking paused');
   } catch (error) {
-    console.error('Toggle tracking error:', error);
+    trackingEnabled = previousValue;
+    updateTrackingToggle();
+    showSuccess(error.message || 'Unable to update tracking.', true);
   }
 }
 
-// ============ STATS LOADING ============
-
 async function loadStats() {
-  try {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
+  try {
     const stats = await chrome.storage.local.get([
       'todayPagesVisited',
       'todayTimeOnSubs',
@@ -174,61 +146,103 @@ async function loadStats() {
       'todayPaywallsFound',
     ]);
 
-    document.getElementById('pagesVisited').textContent =
-      stats.todayPagesVisited || 0;
-    document.getElementById('timeOnSubs').textContent =
-      formatTime(stats.todayTimeOnSubs || 0);
-    document.getElementById('adsDetected').textContent = stats.todayAdsDetected || 0;
-    document.getElementById('paywallsFound').textContent =
-      stats.todayPaywallsFound || 0;
+    setText('pagesVisited', stats.todayPagesVisited || 0);
+    setText('timeOnSubs', formatTime(stats.todayTimeOnSubs || 0));
+    setText('adsDetected', stats.todayAdsDetected || 0);
+    setText('paywallsFound', stats.todayPaywallsFound || 0);
   } catch (error) {
-    console.error('Load stats error:', error);
+    console.error('Stats loading failed:', error);
   }
 }
 
-// ============ HELPER FUNCTIONS ============
+function showLoginView() {
+  document.getElementById('loginView')?.classList.remove('hidden');
+  document.getElementById('mainView')?.classList.add('hidden');
+}
 
-function formatTime(ms) {
-  const minutes = Math.floor(ms / 60000);
-  const hours = Math.floor(minutes / 60);
+function showMainView() {
+  document.getElementById('loginView')?.classList.add('hidden');
+  document.getElementById('mainView')?.classList.remove('hidden');
+}
 
-  if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
+function updateTrackingToggle() {
+  const toggle = document.getElementById('trackingToggle');
+  toggle?.classList.toggle('active', trackingEnabled);
+  toggle?.setAttribute('aria-pressed', String(trackingEnabled));
+
+  const badge = document.getElementById('statusBadge');
+  if (badge) {
+    badge.textContent = trackingEnabled ? 'Tracking' : 'Paused';
+    badge.classList.toggle('active', trackingEnabled);
+    badge.classList.toggle('inactive', !trackingEnabled);
   }
-  return `${minutes}m`;
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`The server returned an invalid response (${response.status}).`);
+  }
+}
+
+function getApiError(payload, fallback) {
+  return payload?.message || payload?.error?.message || payload?.error || fallback;
+}
+
+function setButtonLoading(button, loading, label = '') {
+  if (!button) return;
+  button.disabled = loading;
+  if (loading) {
+    button.replaceChildren(createSpinner());
+  } else {
+    button.textContent = label;
+  }
+}
+
+function createSpinner() {
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner';
+  return spinner;
+}
+
+function formatTime(milliseconds) {
+  const totalMinutes = Math.floor(milliseconds / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  return hours > 0 ? `${hours}h ${totalMinutes % 60}m` : `${totalMinutes}m`;
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = String(value);
 }
 
 function showError(message) {
-  const messageEl = document.getElementById('loginMessage');
-  if (messageEl) {
-    messageEl.textContent = message;
-    messageEl.classList.remove('hidden');
-  }
+  const messageElement = document.getElementById('loginMessage');
+  if (!messageElement) return;
+  messageElement.textContent = message;
+  messageElement.classList.remove('hidden');
 }
 
-function showSuccess(message) {
-  // Create temporary success message
-  const div = document.createElement('div');
-  div.className = 'success';
-  div.textContent = message;
+function hideError() {
+  document.getElementById('loginMessage')?.classList.add('hidden');
+}
+
+function showSuccess(message, isError = false) {
+  const notice = document.createElement('div');
+  notice.className = isError ? 'error' : 'success';
+  notice.textContent = message;
 
   const container = document.querySelector('.container');
-  container.insertBefore(div, container.firstChild);
-
-  setTimeout(() => {
-    div.remove();
-  }, 3000);
+  container?.prepend(notice);
+  setTimeout(() => notice.remove(), 3000);
 }
 
 function openDashboard() {
-  chrome.tabs.create({
-    url: 'https://subscription-tracker-five-puce.vercel.app/dashboard',
-  });
+  chrome.tabs.create({ url: `${APP_BASE_URL}/dashboard` });
 }
 
-// Refresh stats periodically
 setInterval(loadStats, 10000);
-
-document
-  .getElementById('dashboardButton')
-  .addEventListener('click', openDashboard);

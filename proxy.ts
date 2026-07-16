@@ -10,7 +10,7 @@ export function proxy(request: NextRequest) {
   const isPublicRoute = publicRoutes.includes(pathname);
 
   // Protected routes
-  const protectedRoutes = ['/', '/subscriptions', '/analytics', '/notifications', '/settings'];
+  const protectedRoutes = ['/dashboard', '/subscriptions', '/analytics', '/notifications', '/settings'];
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
