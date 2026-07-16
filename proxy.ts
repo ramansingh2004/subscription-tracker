@@ -3,26 +3,20 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('accessToken')?.value;
-
-  // Public routes
-  const publicRoutes = ['/login', '/signup'];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const hasSession = Boolean(
+    request.cookies.get('accessToken')?.value ||
+      request.cookies.get('refreshToken')?.value
+  );
 
   // Protected routes
-  const protectedRoutes = ['/dashboard', '/subscriptions', '/analytics', '/notifications', '/settings'];
+  const protectedRoutes = ['/dashboard', '/subscriptions', '/analytics', '/notifications', '/settings', '/extension'];
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
 
   // Rule 1: No token + protected route = redirect to login
-  if (isProtectedRoute && !token) {
+  if (isProtectedRoute && !hasSession) {
     return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Rule 2: Has token + auth page = redirect to home
-  if (isPublicRoute && token) {
-    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
