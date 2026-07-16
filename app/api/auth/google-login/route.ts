@@ -3,7 +3,7 @@ import { User } from '@/models/User.model';
 import axios from 'axios';
 import dbConnect from '@/lib/mongodb';
 import { generateTokens } from '@/lib/jwt';
-import { setAuthCookies } from '@/lib/';
+import { setAuthCookies } from '@/lib/auth-cookies';
 export async function POST(req: NextRequest) {
   try {
     const { credential } = await req.json();
